@@ -49,3 +49,6 @@ next-env.d.ts
 # Supabase CLI scratch state (version checks, local dev containers)
 supabase/.temp/
 supabase/.branches/
+
+# Ad-hoc throwaway scripts
+.tmp-*

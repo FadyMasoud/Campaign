@@ -124,6 +124,19 @@ running commands rather than by reasoning:
    `anon` role has no privilege on any of them, so the key that ships in the
    browser bundle is worth nothing on its own.
 
+### The test was checked by breaking the thing it tests
+
+The AI proposed reporting the isolation suite as passing. That was rejected as
+insufficient: a suite that returns empty for every query also passes. The
+`contacts` policy was therefore replaced with `using (true)` on the live
+project and the suite re-run — five assertions failed, and crucially `sees
+their own contact` did **not**, which is what distinguishes "isolated" from
+"empty". The policy was restored and every predicate re-read from `pg_policy`
+to confirm it matches the migration exactly.
+
+This is the answer to "what you tried to break before sending it". It is worth
+noting because it is the difference between a test and a decoration.
+
 ### Where the AI was overruled
 
 - It initially reached for a predicate taking the row as an argument —

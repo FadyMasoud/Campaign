@@ -169,6 +169,12 @@ and rows, asserts that neither brand can reach the other, and deletes them
 again — so it proves the mechanism rather than the current arrangement of the
 seeded data.
 
+The suite has been checked the only way a security test can be: the `contacts`
+policy was temporarily replaced with `using (true)` and the suite re-run. Five
+assertions failed and `sees their own contact` did not — so it distinguishes
+*isolated* from merely *empty*. Details in
+[docs/REQUIREMENTS.md](docs/REQUIREMENTS.md#phase-log).
+
 ---
 
 ## Notes for reviewers
