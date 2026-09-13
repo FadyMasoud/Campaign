@@ -70,3 +70,51 @@ be changed before the six users exist:
   the publishable key could create an account. Must be closed.
 - `google: false` — Google OAuth is not yet configured.
 - `email: true` — email/password is already enabled.
+
+---
+
+## Phase 1 — schema and the isolation guarantee
+
+| File | Origin | Author's involvement |
+| --- | --- | --- |
+| `supabase/migrations/20260913160000_brands_and_isolation.sql` | AI-generated | Schema shape debated before writing: the brand-scoped uniqueness of `external_id`, and the composite foreign keys, are decisions the author can defend |
+| `tests/isolation.test.ts` | AI-generated | The author specified what the test must prove; the "build fixtures, do not trust seeded rows" approach was agreed first |
+| `scripts/build-schema.mjs`, `schema.sql` | AI-generated | `schema.sql` is generated, never edited |
+
+### Grounded in the data rather than assumed
+
+The enum vocabularies were not guessed. Every distinct value in the three
+contact exports and the three event exports was counted first, which changed
+the design twice:
+
+1. **`status` is spelled six ways** — `active`, `ACTIVE`, `Active`, `active `
+   (trailing space), `unsubscribe` (singular), and empty — and
+   `consent_marketing` appears in **eleven** forms: `true`, `1`, `TRUE`, `yes`,
+   `Y`, `f`, `false`, `FALSE`, `0`, `no`, empty. The database types are the
+   canonical four and a boolean; normalising is the importer's job, and an
+   unmappable value is rejected and reported rather than stored as a guess.
+
+2. **A constraint that looked obvious was wrong.** `reported_opens <=
+   reported_sent` would have been a natural check to add. Kilele campaign
+   KIL-0016 reports 12,679 opens against 10,640 sent — correctly, because one
+   recipient opening twice is two opens. Counting the data before writing the
+   constraint is what caught it; the omission is commented in the migration so
+   nobody adds it later.
+
+A third observation is deferred to the import phase: naive column splitting on
+the contact files misaligns, because fields are quoted and contain embedded
+commas. The importer needs a real CSV parser, not `split(',')`.
+
+### Where the AI was overruled
+
+- It initially reached for a predicate taking the row as an argument —
+  `app.can_access_brand(brand_id)`. That form is re-evaluated per row. Changed
+  to a row-independent `setof` returning function so the planner hoists it to
+  an InitPlan, which matters at 84k contacts and 312k events.
+- `force row level security` was proposed and dropped: `service_role` bypasses
+  RLS regardless, so it would have added no protection against the threat
+  actually being defended against, while adding a way to break the importer.
+- A per-brand `currency_code` column was proposed for `spend`. Dropped — the
+  exports never state a currency, and inventing one would be exactly the kind
+  of silent assumption requirement 4 is about. The ambiguity gets disclosed on
+  screen instead.

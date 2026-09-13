@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "schema:build": "node scripts/build-schema.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

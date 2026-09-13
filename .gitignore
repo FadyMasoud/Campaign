@@ -45,3 +45,7 @@ next-env.d.ts
 # secrets. This ONE exception re-includes the template, which contains
 # variable NAMES ONLY and never a value. A new dev copies it to .env.local.
 !.env.example
+
+# Supabase CLI scratch state (version checks, local dev containers)
+supabase/.temp/
+supabase/.branches/

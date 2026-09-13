@@ -11,8 +11,9 @@ work only with their own growth data:
 
 Each brand has an **owner** (can send campaigns) and an **analyst** (read-only).
 
-> **Status:** Phase 0 — project setup. The app currently renders a setup
-> diagnostic that verifies it can reach Supabase. No schema or auth yet.
+> **Status:** Phase 1 — schema and isolation. The database schema, the Row
+> Level Security policies and the isolation test are written. The app still
+> renders only the setup diagnostic; sign-in arrives in phase 2.
 
 ---
 
@@ -24,6 +25,34 @@ route into the data, permanently, including tables added later.**
 This is enforced in the database with PostgreSQL Row Level Security, not in the
 user interface. The UI is a convenience; the database is the guarantee. An
 automated test asserts the isolation and fails if RLS is ever removed.
+
+**It lives in one place.** Every policy in the project is the same single line:
+
+```sql
+using (brand_id in (select app.current_user_brand_ids()))
+```
+
+`app.current_user_brand_ids()` is defined once, at
+[20260913160000_brands_and_isolation.sql:104](supabase/migrations/20260913160000_brands_and_isolation.sql#L104).
+Five tables, five identical policies. There is no second place to look and no
+policy that can quietly drift from the others.
+
+Two further mechanisms make the rule hold for **tables that do not exist yet**,
+neither of which depends on anyone remembering:
+
+- Default privileges in `public` are revoked from the API roles, so a table
+  added later is unreachable until it is granted deliberately — the mistake
+  fails closed instead of open.
+- `public.security_coverage()` reports the posture of every table in `public`,
+  and [tests/isolation.test.ts](tests/isolation.test.ts) asserts against that
+  live list rather than a hand-written one. A future table without RLS turns
+  the suite red with nobody editing the test.
+
+The database also refuses cross-brand references structurally: `brand_id` is
+part of both sides of every foreign key between data tables, so a campaign
+cannot point at another brand's parent campaign and an event cannot point at
+another brand's contact. That is aimed at a real row — the Karoo export names
+the Kilele campaign `KIL-0007` as a parent.
 
 ---
 
@@ -91,6 +120,8 @@ it for you there.
 
 ```
 campaign-portal/
+├── schema.sql             Generated single-file view of the migrations
+├── scripts/               Build helpers (schema.sql generator)
 ├── supabase/
 │   ├── migrations/        Numbered .sql files — the schema, in order
 │   └── seed/              Source CSVs for the import phase
@@ -115,6 +146,20 @@ campaign-portal/
 | `npm run typecheck` | TypeScript, no emit |
 | `npm run lint` | ESLint |
 | `npm test` | Integration tests (needs `.env.local`) |
+| `npm run schema:build` | Regenerate `schema.sql` from `supabase/migrations/` |
+
+### Applying the schema
+
+Migrations are applied with the Supabase CLI, against the hosted project:
+
+```bash
+npx supabase db push --db-url "postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres"
+```
+
+`npm test` then verifies the result. The isolation suite creates its own users
+and rows, asserts that neither brand can reach the other, and deletes them
+again — so it proves the mechanism rather than the current arrangement of the
+seeded data.
 
 ---
 
