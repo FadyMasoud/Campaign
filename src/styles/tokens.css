@@ -1,0 +1,197 @@
+/* =============================================================================
+   DESIGN TOKENS
+   The single source of truth for colour, type, space and depth.
+
+   How theming works here, and why it is done in exactly this order:
+
+   1. `:root` holds the COMPLETE light palette. Every token is defined here and
+      nowhere else, so no colour can go missing in one theme.
+   2. The dark block only REDEFINES existing tokens. It never invents new ones.
+   3. Dark is applied twice, on purpose:
+        a) @media (prefers-color-scheme: dark)  -> follows the operating system,
+           guarded by :not([data-theme="light"]) so an explicit light choice
+           still wins over a dark OS setting.
+        b) [data-theme="dark"]                  -> an explicit user choice.
+      That combination is what makes a three-state toggle (light / dark /
+      system) possible without JavaScript having to re-paint the page.
+
+   Nothing outside this file should contain a raw hex colour.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* --- Neutrals -----------------------------------------------------------
+     A warm grey ramp rather than pure grey. Slightly warm neutrals read as
+     "paper" and stop the UI feeling like a default framework demo. */
+  --color-bg: #fbfaf8;              /* page background */
+  --color-surface: #ffffff;         /* cards, panels, table rows */
+  --color-surface-sunken: #f4f2ee;  /* wells, table headers, code */
+  --color-border: #e7e3dc;          /* hairlines */
+  --color-border-strong: #d4cec4;   /* inputs, focus outlines at rest */
+
+  --color-text: #1a1815;            /* body copy */
+  --color-text-muted: #6b655c;      /* labels, captions - 5.5:1 on --color-bg */
+  --color-text-faint: #8c857a;      /* decorative only, never load-bearing */
+
+  /* --- Accent -------------------------------------------------------------
+     ONE accent colour, a clay/sienna. Primary actions and active states only.
+     Restraint is the point of the "modern classic" brief: if everything is
+     emphasised, nothing is. Contrast 5.7:1 on --color-bg. */
+  --color-accent: #a8442a;
+  --color-accent-hover: #8e3821;
+  --color-accent-soft: #f7ece7;     /* tinted background for selected rows */
+  --color-on-accent: #ffffff;       /* text placed ON the accent */
+
+  /* --- Status -------------------------------------------------------------
+     Reserved for meaning, never decoration. These carry real weight in this
+     app: delivered / bounced / unsubscribed. */
+  --color-success: #2f6b4f;
+  --color-success-soft: #e8f1ec;
+  --color-warning: #8a6320;
+  --color-warning-soft: #f7efe0;
+  --color-danger: #a32b2b;
+  --color-danger-soft: #f8e9e9;
+
+  /* --- Type ---------------------------------------------------------------
+     The --font-plex-* variables are injected by next/font in layout.tsx.
+     --font-ui switches between Latin and Arabic automatically: see the
+     [lang="ar"] block at the bottom of this file. */
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: var(--font-plex-arabic), var(--font-plex-sans), sans-serif;
+  --font-serif: var(--font-plex-serif), ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
+  --font-ui: var(--font-sans);
+
+  /* A restrained modular scale (~1.25). Editorial layouts need a few sizes
+     used confidently, not many sizes used timidly. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 3rem;
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.6;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.08em;          /* small-caps eyebrow labels */
+
+  /* --- Space --------------------------------------------------------------
+     A 4px base step. Every margin and padding comes from here, so vertical
+     rhythm stays consistent without anyone eyeballing pixel values. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+
+  /* --- Shape and depth ----------------------------------------------------
+     Subtle depth: shadows suggest a raised sheet of paper, they do not glow. */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgb(26 24 21 / 0.05);
+  --shadow-md: 0 2px 4px rgb(26 24 21 / 0.06), 0 4px 12px rgb(26 24 21 / 0.05);
+  --shadow-lg: 0 4px 8px rgb(26 24 21 / 0.06), 0 12px 32px rgb(26 24 21 / 0.08);
+
+  /* --- Layout ------------------------------------------------------------- */
+  --width-content: 68rem;           /* app shell max width */
+  --width-prose: 42rem;             /* comfortable reading measure */
+
+  --transition-fast: 120ms ease;
+  --transition-base: 200ms ease;
+}
+
+/* --- DARK: follows the OS, unless the user explicitly chose light ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --color-bg: #121110;
+    --color-surface: #1a1917;
+    --color-surface-sunken: #232120;
+    --color-border: #2c2a27;
+    --color-border-strong: #403c38;
+
+    --color-text: #f2efea;
+    --color-text-muted: #a09a90;    /* 6.8:1 on --color-bg */
+    --color-text-faint: #7d776e;
+
+    /* The accent is LIGHTENED for dark mode. The light-mode clay would fail
+       contrast on a dark ground. This is a token swap, not a new colour. */
+    --color-accent: #e0764f;
+    --color-accent-hover: #ee8a64;
+    --color-accent-soft: #2a1c16;
+    --color-on-accent: #1a1815;     /* dark text on a light accent */
+
+    --color-success: #7fbd9c;
+    --color-success-soft: #17251e;
+    --color-warning: #d6ad6a;
+    --color-warning-soft: #261f13;
+    --color-danger: #e58a8a;
+    --color-danger-soft: #2a1717;
+
+    /* Shadows are near-useless on dark grounds; depth comes from surface
+       lightness instead. We keep them, but subtler. */
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 2px 4px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.25);
+    --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.35), 0 12px 32px rgb(0 0 0 / 0.4);
+  }
+}
+
+/* --- DARK: the user explicitly chose it, whatever the OS says -------------- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg: #121110;
+  --color-surface: #1a1917;
+  --color-surface-sunken: #232120;
+  --color-border: #2c2a27;
+  --color-border-strong: #403c38;
+
+  --color-text: #f2efea;
+  --color-text-muted: #a09a90;
+  --color-text-faint: #7d776e;
+
+  --color-accent: #e0764f;
+  --color-accent-hover: #ee8a64;
+  --color-accent-soft: #2a1c16;
+  --color-on-accent: #1a1815;
+
+  --color-success: #7fbd9c;
+  --color-success-soft: #17251e;
+  --color-warning: #d6ad6a;
+  --color-warning-soft: #261f13;
+  --color-danger: #e58a8a;
+  --color-danger-soft: #2a1717;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 2px 4px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.25);
+  --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.35), 0 12px 32px rgb(0 0 0 / 0.4);
+}
+
+/* --- Arabic ---------------------------------------------------------------
+   Swapping ONE token repoints every piece of UI type at the Arabic face.
+   Direction itself is set with dir="rtl" on <html>, not here: that is the
+   browser's job, and it is what makes CSS logical properties flip. */
+:root[lang="ar"] {
+  --font-ui: var(--font-arabic);
+
+  /* Arabic letterforms have a taller x-height and no capitals, so the same
+     point size reads smaller and tighter. A nudge to line-height keeps the two
+     languages feeling like one design rather than two. */
+  --leading-normal: 1.8;
+  --leading-snug: 1.5;
+}

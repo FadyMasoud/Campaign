@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# --- Project-specific ---------------------------------------------------
+# The rule above ignores every .env* file, which is what we want for real
+# secrets. This ONE exception re-includes the template, which contains
+# variable NAMES ONLY and never a value. A new dev copies it to .env.local.
+!.env.example

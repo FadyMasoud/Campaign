@@ -1,49 +1,151 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* =============================================================================
+   GLOBAL BASELINE
+   Tokens come first so every rule below can refer to them.
+   ========================================================================== */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+@import "../styles/tokens.css";
 
-html {
-  height: 100%;
-}
+/* --- Reset ----------------------------------------------------------------
+   Deliberately small. A heavy reset makes it harder to explain why something
+   looks the way it does. */
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 * {
-  box-sizing: border-box;
-  padding: 0;
   margin: 0;
+  padding: 0;
 }
+
+html {
+  /* Anchor links and in-page scrolling land below sticky headers cleanly. */
+  scroll-padding-block-start: var(--space-7);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-block-size: 100dvh;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Kerning and ligatures on: this is what makes the type look typeset rather
+     than rendered. Cheap, and a large part of the "editorial" feel. */
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
+}
+
+/* --- Headings -------------------------------------------------------------
+   Serif display type against a sans UI is the core of the "modern classic"
+   pairing: the serif carries authority, the sans carries information. */
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  text-wrap: balance; /* stops a lone orphan word on the last line */
+}
+
+h4,
+h5,
+h6 {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+}
+
+/* Arabic has no true serif tradition equivalent to the Latin one, and forcing
+   a Latin serif onto Arabic text produces a fallback font. Headings in Arabic
+   use the Arabic face and lean on weight for hierarchy instead. */
+:root[lang="ar"] h1,
+:root[lang="ar"] h2,
+:root[lang="ar"] h3 {
+  font-family: var(--font-arabic);
+  letter-spacing: var(--tracking-normal); /* negative tracking breaks joins */
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* --- Interactive ---------------------------------------------------------- */
 
 a {
   color: inherit;
-  text-decoration: none;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+/* --- Focus ----------------------------------------------------------------
+   :focus-visible, not :focus, so a mouse click does not leave a ring behind
+   but keyboard navigation always shows exactly where you are. Removing this
+   without replacing it makes the app unusable without a mouse. */
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* --- Motion ---------------------------------------------------------------
+   Respect users who have asked their OS for reduced motion. For some people
+   this is a genuine accessibility need, not a preference. */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
+}
+
+/* --- Shared utilities ----------------------------------------------------- */
+
+/* Visually hidden but still read aloud by screen readers. Used for labels that
+   would be visual clutter but are needed for comprehension. */
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }

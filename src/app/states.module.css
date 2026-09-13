@@ -1,0 +1,109 @@
+/* Shared styling for the loading and error states. */
+
+.page {
+  display: flex;
+  justify-content: center;
+  padding-block: var(--space-8);
+  padding-inline: var(--space-4);
+}
+
+.container {
+  inline-size: 100%;
+  max-inline-size: var(--width-prose);
+}
+
+/* --- Loading skeleton ------------------------------------------------------
+   A slow, low-contrast pulse. Anything faster or more contrasty reads as an
+   error state rather than as waiting. The reduced-motion rule in globals.css
+   flattens this animation for users who have asked for that. */
+
+.skeleton {
+  background-color: var(--color-surface-sunken);
+  border-radius: var(--radius-sm);
+  margin-block-end: var(--space-3);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.skeletonPanel {
+  block-size: 14rem;
+  background-color: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  margin-block-start: var(--space-6);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* --- Error ---------------------------------------------------------------- */
+
+.errorPanel {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+
+  /* A weighted edge on the start side: a restrained way to signal severity
+     without turning the whole card red. Flips side automatically in RTL. */
+  border-inline-start: 3px solid var(--color-danger);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-6);
+}
+
+.errorEyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-danger);
+  margin-block-end: var(--space-3);
+}
+
+.errorTitle {
+  font-size: var(--text-2xl);
+  margin-block-end: var(--space-3);
+}
+
+.errorBody {
+  color: var(--color-text-muted);
+  margin-block-end: var(--space-4);
+}
+
+.errorDigest {
+  font-size: var(--text-sm);
+  color: var(--color-text-faint);
+  margin-block-end: var(--space-5);
+}
+
+.errorDigest code {
+  font-family: var(--font-mono);
+  direction: ltr;
+  unicode-bidi: embed;
+}
+
+/* --- Button --------------------------------------------------------------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 2.75rem; /* a comfortable touch target on a phone */
+  padding-inline: var(--space-5);
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: background-color var(--transition-fast);
+}
+
+.button:hover {
+  background-color: var(--color-accent-hover);
+}
