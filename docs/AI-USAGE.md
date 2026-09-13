@@ -105,6 +105,25 @@ A third observation is deferred to the import phase: naive column splitting on
 the contact files misaligns, because fields are quoted and contain embedded
 commas. The importer needs a real CSV parser, not `split(',')`.
 
+### Verified against the live project
+
+Applying the migration surfaced two things worth recording, both found by
+running commands rather than by reasoning:
+
+1. **`db.PROJECT_REF.supabase.co` is IPv6-only.** `supabase db push` failed
+   with `ENOTFOUND`, which reads like a bad password. `nslookup` showed an
+   AAAA record and no A record. The fix is the dual-stack pooler host in
+   session mode (port 5432, username `postgres.PROJECT_REF`). The region was
+   not guessed: the IPv6 address was matched against Amazon's published
+   `ip-ranges.json`, which puts `2a05:d018::/35` in `eu-west-1`.
+
+2. **The isolation guarantee was confirmed before the test suite could run.**
+   With the publishable key and no session, all five tables return `42501
+   permission denied` — not `404` — while a deliberately absent table returns
+   `404 PGRST205`. That difference is the proof: the tables exist, and the
+   `anon` role has no privilege on any of them, so the key that ships in the
+   browser bundle is worth nothing on its own.
+
 ### Where the AI was overruled
 
 - It initially reached for a predicate taking the row as an argument —

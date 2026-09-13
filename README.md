@@ -153,8 +153,16 @@ campaign-portal/
 Migrations are applied with the Supabase CLI, against the hosted project:
 
 ```bash
-npx supabase db push --db-url "postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres"
+npx supabase db push --db-url \
+  "postgresql://postgres.PROJECT_REF:PASSWORD@aws-1-REGION.pooler.supabase.com:5432/postgres"
 ```
+
+Note the **pooler** host, not the `db.PROJECT_REF.supabase.co` one the
+dashboard shows first. That direct hostname now resolves to an IPv6 address
+only, so on an IPv4-only network it fails with `ENOTFOUND` — which looks like
+a wrong password but is not. The pooler is dual-stack. Port 5432 is session
+mode, which migrations need; 6543 is transaction mode and will not run DDL
+reliably. The username on the pooler is `postgres.PROJECT_REF`, not `postgres`.
 
 `npm test` then verifies the result. The isolation suite creates its own users
 and rows, asserts that neither brand can reach the other, and deletes them
