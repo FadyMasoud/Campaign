@@ -150,3 +150,63 @@ noting because it is the difference between a test and a decoration.
   exports never state a currency, and inventing one would be exactly the kind
   of silent assumption requirement 4 is about. The ambiguity gets disclosed on
   screen instead.
+
+---
+
+## Phase 2 — sign-in, sessions and roles
+
+| File | Origin | Author's involvement |
+| --- | --- | --- |
+| `src/proxy.ts` | AI-generated | Author insisted the file document what it is *not* for, since proxy looks like an authorization boundary and is not one |
+| `src/lib/supabase/proxy-client.ts` | AI-generated | The response-getter pattern was questioned until explained |
+| `src/lib/auth/dal.ts` | AI-generated | The `cache()` scope — one render pass, not cross-request — was checked explicitly, as a cross-request cache here would serve one user another user's brand |
+| `src/lib/auth/actions.ts` | AI-generated | The open-redirect guard on `next` was requested by the author |
+| `src/app/login/*`, `src/app/portal/*`, `src/app/no-access/*` | AI-generated | Copy reviewed line by line |
+| `src/app/auth/callback/route.ts` | AI-generated | PKCE code exchange |
+| `scripts/seed-users.mjs`, `supabase/seed/portal-accounts.json` | AI-generated | Author required one source of truth shared with the test, so handed-over credentials cannot drift |
+| `tests/accounts.test.ts` | AI-generated | Author specified: sign in as all six *directly against Supabase*, because that is how the brief says graders will attack it |
+
+### Read the docs rather than the training data
+
+`middleware.ts` is `proxy.ts` in Next.js 16, and the version-matched docs in
+`node_modules/next/dist/docs/` were read before writing it. Two things came
+from that reading and not from assumption:
+
+- The docs state plainly that proxy **is not an authorization mechanism** —
+  it is an optimistic check, it runs on prefetches, and it can be bypassed by
+  a request that reaches a route handler directly. That is why the real check
+  sits in the database and the second one in the data access layer, and why
+  `src/proxy.ts` carries a comment saying deleting it would leak nothing.
+- `searchParams` is a Promise in this version. Reading it synchronously is a
+  type error that would have been easy to "fix" the wrong way.
+
+### Two bugs the tests found, not the author
+
+1. **The `.eq('user_id')` filter is load-bearing.** The `brand_members` policy
+   shows you every member of your own brand, so an owner also sees their
+   analyst. The DAL had the filter; the first draft of the test did not, and
+   `.single()` failed with *"The result contains 2 rows"*. The test was wrong
+   and the code was right — but only because the question had been thought
+   about once already. Both behaviours are now asserted explicitly.
+
+2. **The two test suites raced each other.** Vitest runs files in parallel by
+   default, and the isolation suite attaches temporary fixture users to Kilele
+   and Karoo — while the accounts suite was counting the members of those same
+   brands. Three where there should be two. Neither suite was wrong; sharing
+   one live database while running concurrently was. Fixed with
+   `fileParallelism: false`, and the reason is recorded in the config so
+   nobody "optimises" it back.
+
+### Verified against the live project
+
+`/auth/v1/settings` was read again after the work: `email: true`,
+`google: false`, `disable_signup: false`. The last two are dashboard settings
+that code cannot change, and both are listed as outstanding rather than
+quietly assumed done.
+
+A probe of the public sign-up endpoint returned *"Email address … is
+invalid"* for a `@vg-eval.test` address — Supabase validates the domain on
+the public endpoint while the admin API does not. So the six seeded accounts
+could only have been created by an admin, and Google is the realistic route
+by which an outsider arrives authenticated. That is exactly the case
+`/no-access` exists for.

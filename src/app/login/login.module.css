@@ -1,0 +1,205 @@
+/* Sign-in screen.
+   All spacing uses logical properties so the Arabic layout mirrors with a
+   `dir` change rather than a second stylesheet. */
+
+.page {
+  display: grid;
+  place-items: center;
+  min-block-size: 100dvh;
+  padding: var(--space-5);
+  background-color: var(--color-bg);
+}
+
+.card {
+  inline-size: 100%;
+  max-inline-size: 26rem;
+  padding: var(--space-7);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+/* On a phone the card should read as the page, not as a box floating on it. */
+@media (max-width: 30rem) {
+  .page {
+    padding: 0;
+    place-items: stretch;
+  }
+
+  .card {
+    max-inline-size: none;
+    min-block-size: 100dvh;
+    padding: var(--space-6) var(--space-5);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+.header {
+  margin-block-end: var(--space-6);
+}
+
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  margin-block-end: var(--space-2);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text);
+  margin-block-end: var(--space-3);
+}
+
+.lede {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}
+
+.forms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.input {
+  inline-size: 100%;
+  padding: var(--space-3);
+  font-family: inherit;
+  /* 1rem minimum: iOS Safari zooms the whole page in when a focused input is
+     smaller than 16px, which on a phone reads as the layout breaking. */
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.submit,
+.google {
+  inline-size: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  /* Comfortably past the 44px touch target minimum. */
+  min-block-size: 2.75rem;
+}
+
+.submit {
+  color: var(--color-on-accent);
+  background-color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+}
+
+.submit:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+}
+
+.google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+}
+
+.google:hover:not(:disabled) {
+  border-color: var(--color-text-muted);
+}
+
+.submit:disabled,
+.google:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.submit:focus-visible,
+.google:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.googleMark {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text-faint);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  block-size: 1px;
+  background-color: var(--color-border);
+}
+
+.dividerText {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.error {
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-danger);
+  background-color: var(--color-danger-soft);
+  /* Logical property: this sits on the left in English, the right in Arabic. */
+  border-inline-start: 3px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+}

@@ -11,7 +11,7 @@ Status: ☐ not started · ◐ in progress · ☑ done
 
 | # | Requirement | Phase | Status |
 | --- | --- | --- | --- |
-| 1 | Three brands live. Six logins, each landing in its own portal, at an openable URL, **whichever way they sign in**. Owners send, analysts can't, outsiders get in nowhere. | 2 | ☐ |
+| 1 | Three brands live. Six logins, each landing in its own portal, at an openable URL, **whichever way they sign in**. Owners send, analysts can't, outsiders get in nowhere. | 2 | ◐ |
 | 2 | A brand sees its own data and nothing from another brand — on every route, **including ones added later**. | 1 | ☑ |
 | 3 | Data loads; the marketer sees what didn't and why. Loading the same export twice leaves **one** set of customers. | 3 | ☐ |
 | 4 | Numbers are right. Where two careful people could count differently, **say on screen which way you counted**. | 4 | ☐ |
@@ -28,8 +28,8 @@ Status: ☐ not started · ◐ in progress · ☑ done
 | Item | Where it comes from | Status |
 | --- | --- | --- |
 | Live URL | Deploy (Vercel) | ☐ |
-| Six logins — email **and password** for each | Phase 2 | ☐ |
-| Confirmation Google sign-in is live | Phase 2 | ☐ |
+| Six logins — email **and password** for each | Phase 2 | ☑ |
+| Confirmation Google sign-in is live | Phase 2 — code done, provider off | ◐ |
 | Supabase project URL + anon key | Have both | ☑ |
 | Table **and function** names | Phase 1 | ☑ |
 | Which key the deployed app uses | Publishable, everywhere user-facing | ◐ |
@@ -175,3 +175,58 @@ they match the migration character for character; the suite is green again.
 
 The database held 0 contacts, 0 campaigns, 0 events and 0 users at the time, so
 nothing was exposed by the experiment.
+
+### Phase 2 — the six logins
+
+**The six logins.** One source of truth,
+`supabase/seed/portal-accounts.json`, read both by `npm run seed:users`, which
+creates the accounts, and by `tests/accounts.test.ts`, which signs in as every
+one of them. The credentials handed over at submission therefore cannot drift
+from the accounts that exist.
+
+| Email | Password | Brand | Role |
+| --- | --- | --- | --- |
+| `owner@kilele.vg-eval.test` | `Kilele-Owner-2026` | Kilele Rides | owner |
+| `analyst@kilele.vg-eval.test` | `Kilele-Analyst-2026` | Kilele Rides | analyst |
+| `owner@karoo.vg-eval.test` | `Karoo-Owner-2026` | Karoo Coaches | owner |
+| `analyst@karoo.vg-eval.test` | `Karoo-Analyst-2026` | Karoo Coaches | analyst |
+| `owner@marrakech.vg-eval.test` | `Marrakech-Owner-2026` | Marrakech Express | owner |
+| `analyst@marrakech.vg-eval.test` | `Marrakech-Analyst-2026` | Marrakech Express | analyst |
+
+`tests/accounts.test.ts` signs in as all six *directly against Supabase*, the
+way the brief says graders will, and asserts that each sees exactly one brand
+and it is the right one. The query it uses carries no `where` clause on brand —
+receiving one row instead of three is the guarantee answering.
+
+**Where authorization actually lives.** Three layers, and only the first is
+load-bearing:
+
+| Layer | File | What it does | If deleted |
+| --- | --- | --- | --- |
+| Database | the RLS policies | Refuses another brand's rows | Isolation gone — tests go red |
+| Data access layer | `src/lib/auth/dal.ts` | Resolves *which* brand is being rendered; redirects | Pages break; no data leaks |
+| Proxy | `src/proxy.ts` | Sends signed-out visitors to `/login`, refreshes tokens | Uglier redirects; no data leaks |
+
+`proxy.ts` is deliberately not an authorization mechanism — the Next.js
+documentation is explicit that it is an optimistic check only, and it runs on
+prefetches.
+
+**Two things found by running it rather than reasoning about it:**
+
+1. The `brand_members` policy shows you *every* member of your own brand, so an
+   owner also sees their analyst. A query without `.eq('user_id', …)` returns
+   two rows and `.single()` fails. The DAL had the filter; the first draft of
+   the test did not, and the test caught it. Both behaviours are now asserted.
+2. The two test suites raced: the isolation suite's temporary fixture users
+   were attached to Kilele and Karoo while the accounts suite counted those
+   brands' members. Both suites were right; running them concurrently against
+   one database was not. Fixed with `fileParallelism: false`.
+
+**Still outstanding, and both need the dashboard rather than code:**
+
+- `disable_signup: false` — public sign-up is still open. A stranger cannot
+  reach any brand's data (asserted in the isolation suite), but the account
+  should not be creatable at all.
+- `external.google: false` — Google sign-in is written and wired end to end,
+  but the provider is off, so the button cannot work until it is enabled and a
+  Google Cloud OAuth client exists.

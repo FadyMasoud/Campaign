@@ -11,9 +11,28 @@ work only with their own growth data:
 
 Each brand has an **owner** (can send campaigns) and an **analyst** (read-only).
 
-> **Status:** Phase 1 — schema and isolation. The database schema, the Row
-> Level Security policies and the isolation test are written. The app still
-> renders only the setup diagnostic; sign-in arrives in phase 2.
+> **Status:** Phase 2 — sign-in. Six accounts sign in and land in their own
+> brand's portal. Google sign-in is wired end to end but the provider is not
+> yet enabled on the Supabase project. Importing the real data is phase 3, so
+> the portal currently shows an empty state.
+
+## The six logins
+
+| Email | Password | Brand | Role |
+| --- | --- | --- | --- |
+| `owner@kilele.vg-eval.test` | `Kilele-Owner-2026` | Kilele Rides | owner |
+| `analyst@kilele.vg-eval.test` | `Kilele-Analyst-2026` | Kilele Rides | analyst |
+| `owner@karoo.vg-eval.test` | `Karoo-Owner-2026` | Karoo Coaches | owner |
+| `analyst@karoo.vg-eval.test` | `Karoo-Analyst-2026` | Karoo Coaches | analyst |
+| `owner@marrakech.vg-eval.test` | `Marrakech-Owner-2026` | Marrakech Express | owner |
+| `analyst@marrakech.vg-eval.test` | `Marrakech-Analyst-2026` | Marrakech Express | analyst |
+
+These are synthetic accounts on synthetic data. `@vg-eval.test` is a reserved
+TLD that cannot receive mail. Recreate or reset them with `npm run seed:users`,
+which is idempotent — it updates existing accounts rather than duplicating
+them. The list lives in `supabase/seed/portal-accounts.json` and is read both
+by that script and by the test that signs in as all six, so the credentials
+above cannot drift from the accounts that exist.
 
 ---
 
@@ -147,6 +166,36 @@ campaign-portal/
 | `npm run lint` | ESLint |
 | `npm test` | Integration tests (needs `.env.local`) |
 | `npm run schema:build` | Regenerate `schema.sql` from `supabase/migrations/` |
+| `npm run seed:users` | Create or reset the six portal logins |
+
+---
+
+## How sign-in works
+
+Three layers sit between a visitor and a brand's data, and only the first one
+is load-bearing:
+
+| Layer | File | What it does | If it were deleted |
+| --- | --- | --- | --- |
+| Database | the RLS policies | Refuses another brand's rows outright | Isolation gone; tests go red |
+| Data access layer | [src/lib/auth/dal.ts](src/lib/auth/dal.ts) | Resolves which brand is being rendered; redirects | Pages break; no data leaks |
+| Proxy | [src/proxy.ts](src/proxy.ts) | Redirects signed-out visitors; refreshes the token | Uglier redirects; no data leaks |
+
+`proxy.ts` deliberately does **not** decide who may see what. The Next.js
+documentation is explicit that proxy is an optimistic check, not an
+authorization mechanism: it runs on prefetches and a request can reach a route
+handler without passing through it. Putting the guarantee there would be
+putting it in the one place that can be skipped.
+
+Sessions are exchanged in Server Actions rather than in the browser, so the
+tokens are written as HttpOnly cookies that the page's own JavaScript cannot
+read.
+
+**Authentication is not authorization.** Google will happily verify anyone with
+a Google account, and they arrive as a genuinely signed-in user. An account
+with no row in `brand_members` is sent to `/no-access`, which names no brand
+and shows no numbers — a stranger should not learn from an error screen which
+brands exist or how large they are.
 
 ### Applying the schema
 

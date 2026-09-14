@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "schema:build": "node scripts/build-schema.mjs"
+    "schema:build": "node scripts/build-schema.mjs",
+    "seed:users": "node scripts/seed-users.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

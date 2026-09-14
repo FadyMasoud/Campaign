@@ -1,0 +1,41 @@
+{
+  "note": "The six portal logins. One source of truth, read by scripts/seed-users.mjs when creating them and by tests/accounts.test.ts when verifying them, so the credentials handed over cannot drift from the ones that exist. Passwords are in the repository deliberately: this is a throwaway evaluation project on synthetic data and the brief asks for the six logins. @vg-eval.test is a reserved TLD that cannot receive mail.",
+  "accounts": [
+    {
+      "email": "owner@kilele.vg-eval.test",
+      "password": "Kilele-Owner-2026",
+      "brand": "KILELE",
+      "role": "owner"
+    },
+    {
+      "email": "analyst@kilele.vg-eval.test",
+      "password": "Kilele-Analyst-2026",
+      "brand": "KILELE",
+      "role": "analyst"
+    },
+    {
+      "email": "owner@karoo.vg-eval.test",
+      "password": "Karoo-Owner-2026",
+      "brand": "KAROO",
+      "role": "owner"
+    },
+    {
+      "email": "analyst@karoo.vg-eval.test",
+      "password": "Karoo-Analyst-2026",
+      "brand": "KAROO",
+      "role": "analyst"
+    },
+    {
+      "email": "owner@marrakech.vg-eval.test",
+      "password": "Marrakech-Owner-2026",
+      "brand": "MARRAKECH",
+      "role": "owner"
+    },
+    {
+      "email": "analyst@marrakech.vg-eval.test",
+      "password": "Marrakech-Analyst-2026",
+      "brand": "MARRAKECH",
+      "role": "analyst"
+    }
+  ]
+}
