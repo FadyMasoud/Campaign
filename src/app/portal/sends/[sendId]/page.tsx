@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireBrand } from '@/lib/auth/dal'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { SyncReports } from './sync'
 import styles from '../../campaigns/[campaignId]/send/send.module.css'
 
 export const metadata: Metadata = { title: 'Send record · Campaign Portal' }
@@ -17,6 +18,8 @@ type Send = {
   accepted_count: number | null
   rejected_count: number | null
   provider_batch_id: string | null
+  last_synced_at: string | null
+  events_applied: number
   approved_at: string
   dispatched_at: string | null
   completed_at: string | null
@@ -54,7 +57,7 @@ export default async function SendRecordPage({
   const { data: send } = await supabase
     .from('campaign_sends')
     .select(
-      'id, campaign_id, status, requested_email, approved_count, accepted_count, rejected_count, provider_batch_id, approved_at, dispatched_at, completed_at, error, campaigns(name, external_id, channel)',
+      'id, campaign_id, status, requested_email, approved_count, accepted_count, rejected_count, provider_batch_id, last_synced_at, events_applied, approved_at, dispatched_at, completed_at, error, campaigns(name, external_id, channel)',
     )
     .eq('id', sendId)
     .maybeSingle<Send>()
@@ -168,6 +171,21 @@ export default async function SendRecordPage({
             </tbody>
           </table>
         )}
+
+        {send.provider_batch_id ? (
+          <div className={styles.syncPanel}>
+            <p className={styles.countNote}>
+              {send.last_synced_at
+                ? `Last read from the provider ${when(send.last_synced_at)}, ${send.events_applied.toLocaleString('en')} report${send.events_applied === 1 ? '' : 's'} applied so far.`
+                : 'The provider has not been read yet for this send.'}{' '}
+              Reports arrive over time, including while nothing is watching, so
+              this reads whatever has accumulated since last time. Pressing it
+              twice is safe — reports are stored against the provider&rsquo;s own
+              reference, so the same report is never applied twice.
+            </p>
+            <SyncReports sendId={send.id} />
+          </div>
+        ) : null}
 
         <p className={styles.countNote}>
           Delivery and engagement reports arrive from the provider over time and

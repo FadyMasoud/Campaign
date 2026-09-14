@@ -11,11 +11,10 @@ work only with their own growth data:
 
 Each brand has an **owner** (can send campaigns) and an **analyst** (read-only).
 
-> **Status:** Phase 5 — sending works. Six accounts sign in (email or Google)
-> and land in their own brand's dashboard, customers list and campaigns view,
-> over 95,176 customers, 69 campaigns and 371,249 recorded results. An owner
-> can review an audience and send it through the messaging provider; ingesting
-> the provider's delivery reports is phase 6.
+> **Status:** Phase 6 — the full loop works. Six accounts sign in (email or
+> Google) and land in their own brand's portal. An owner can review an
+> audience, send it through the messaging provider, and read the delivery
+> reports back as they arrive. The password-protected shared link is phase 7.
 
 | Brand | Customers | Campaigns | Results |
 | --- | --- | --- | --- |
@@ -453,3 +452,50 @@ derived order-independently rather than by last-write-wins.
 The provider's `brand_code` field is also ignored — it comes back as
 `"account"` regardless of what was sent. Which brand an event belongs to comes
 from the send we created, never from the provider.
+
+---
+
+## Reading the provider's delivery reports
+
+The provider has no webhook — its API is `GET /v1/messages/{id}/events?since=`
+— so the app polls. Reports pile up while nothing is watching and are
+collected when it next looks. **Fetch latest delivery reports** on
+`/portal/sends/{id}` runs a sync; the same function is what a scheduled job
+would call.
+
+On the real send, twice in a row:
+
+| | First sync | Second sync |
+| --- | --- | --- |
+| Events read | 320 | 20 |
+| New engagement rows | 90 | **0** |
+| Recipients updated | 240 | **0** |
+
+223 delivered, 17 bounced. The second run read the same events and changed
+nothing.
+
+**Nothing assumes a report arrives once, in order, or at all:**
+
+- **Idempotent** — reports are stored against the provider's own `event_id`,
+  under the same unique constraint that made re-importing a seed file a no-op.
+- **Order-independent** — an opt-out keeps its earliest timestamp, so a report
+  arriving late cannot undo one already recorded.
+- **Ranked, not overwritten** — `bounced` beats `delivered`, so a stale
+  delivery report cannot mark a dead address reachable again.
+
+### The forged event
+
+The real Marrakech batch contained this:
+
+```json
+{"event_id":"evt-batch_50-forged","recipient_id":"CT-033857",
+ "brand_code":"KAROO","type":"delivered"}
+```
+
+It claims to be Karoo, names a contact belonging to **Kilele**, and arrived in
+a **Marrakech** send's report stream.
+
+It was discarded and nothing was written, because the provider's `brand_code`
+is never read and `recipient_id` is resolved only against contacts of the brand
+whose send is being synced. Which tenant a row belongs to is not a decision
+worth outsourcing to whoever is sending the reports.

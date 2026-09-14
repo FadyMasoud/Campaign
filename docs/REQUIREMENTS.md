@@ -17,7 +17,7 @@ Status: ☐ not started · ◐ in progress · ☑ done
 | 4 | Numbers are right. Where two careful people could count differently, **say on screen which way you counted**. | 4 | ☑ |
 | 5 | As usable for the 90× brand as the small one. | 4 | ☑ |
 | 6 | Sending is safe and honest. Confirmation count = what is approved. No double-send, no silent half-send. Past approvals still read as approved. | 5 | ☑ |
-| 7 | Provider talks back over time, out of order, while the app isn't looking. "Who's contactable" stays correct. | 6 | ☐ |
+| 7 | Provider talks back over time, out of order, while the app isn't looking. "Who's contactable" stays correct. | 6 | ☑ |
 | 8 | **At least one test that fails if brand isolation is removed.** | 1 | ☑ |
 | 9 | Shared link safe for a stranger: one campaign's aggregates, nothing reachable by guessing the URL or getting past the password. | 7 | ☐ |
 | 10 | Bad input rejected not stored. Loading / empty / broken screens say so. AI tools named. | all | ◐ |
@@ -450,3 +450,61 @@ proves a late report cannot undo an earlier opt-out.
 **Also never trusted: the provider's `brand_code`.** It comes back as
 `"account"` regardless of what was sent. Which brand an event belongs to is
 determined from the send we created, never from the provider's own field.
+
+### Phase 6 — the provider talks back
+
+**How reports are collected.** The provider offers no webhook — its API is
+`GET /v1/messages/{batch_id}/events?since={cursor}` — so the app polls. Reports
+accumulate while nothing is watching and are collected whenever it next looks,
+which is exactly the situation the brief describes. `Fetch latest delivery
+reports` on `/portal/sends/{id}` triggers a sync; the same function is what a
+scheduled job would call.
+
+**Proven against the live service, on the real send:**
+
+| | First sync | Second sync |
+| --- | --- | --- |
+| Pages read | 7 | 1 |
+| Events seen | 320 | 20 |
+| Engagement rows inserted | 90 | **0** |
+| Recipients updated | 240 | **0** |
+
+240 recipients resolved to 223 delivered and 17 bounced. The second sync read
+the same events and changed nothing — idempotency on real data, not a fixture.
+
+**Three mechanisms, two of which already existed:**
+
+| Property | Mechanism |
+| --- | --- |
+| Idempotent | Reports land in `contact_events` keyed on the provider's own `event_id`, against the `unique (brand_id, external_id)` added in phase 1 — the same constraint that made re-importing a seed file a no-op |
+| Order-independent | Contactability uses `least()` in the phase 4 trigger, so the earliest opt-out wins and a late report cannot undo one already recorded |
+| Precedence | Delivery status is ranked (`bounced` > `delivered` > `accepted` > `queued`), so a stale `delivered` cannot mark a dead address reachable again |
+
+**The forged cross-tenant event.** The real Marrakech batch contained this:
+
+```json
+{"event_id":"evt-batch_50-forged","recipient_id":"CT-033857",
+ "brand_code":"KAROO","type":"delivered","occurred_at":"2026-09-14T12:02:28Z"}
+```
+
+Three brands named in one event and none of them consistent: it claims Karoo,
+names a contact that belongs to **Kilele**, and arrived inside a **Marrakech**
+send's stream. It was discarded, counted as `unmatched: 1`, and nothing was
+written anywhere.
+
+Two decisions made that automatic, both taken before the event was seen:
+
+1. The provider's `brand_code` is **never** read. It returns `"account"`
+   regardless of what was sent, so trusting it would have handed a third party
+   the isolation guarantee.
+2. `recipient_id` is resolved against `contacts` scoped to the brand of the
+   **send being synced**, not globally. A reference that belongs to another
+   brand therefore matches nothing.
+
+Reproduced in `tests/provider-reports.test.ts`, along with a page containing
+both a forged event and a legitimate one — the good report is still applied.
+
+**Which number is least trustworthy** — updated for point 3 of the 300-word
+note. Still Karoo's contactable figure, and the provider reports have now made
+the same point about Marrakech: 17 of 240 addresses bounced on first contact,
+which says the customer records were stale before the send rather than after.

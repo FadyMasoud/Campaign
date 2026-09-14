@@ -415,3 +415,65 @@ that passed `approved_count: 0`, which would have displayed as a false
 half-send; that record was deleted and the send redone with the count a
 marketer would actually have seen, rather than left in the database as a
 misleading artefact.
+
+---
+
+## Phase 6 — ingesting the provider's reports
+
+| File | Origin | Author's involvement |
+| --- | --- | --- |
+| `supabase/migrations/…_provider_reports.sql` | AI-generated | Ranking delivery status rather than overwriting it was specified before writing |
+| `supabase/migrations/…_apply_reports_callable.sql` | AI-generated | Corrects two mistakes in the previous migration, both found by running it |
+| `src/lib/provider/ingest.ts` | AI-generated | Saving the cursor *after* applying a page, never before, was the author's requirement |
+| `src/lib/provider/actions.ts` | AI-generated | The brand check before touching the service role was insisted on |
+| `src/app/portal/sends/[sendId]/sync.tsx` | AI-generated | Copy reviewed; the message reports how many were NEW, not how many were read |
+| `tests/provider-reports.test.ts` | AI-generated | Cases taken from what the live service actually returned |
+
+### The provider planted a forged cross-tenant event
+
+Syncing the real Marrakech send reported `unmatched: 1`. Chasing that one row
+found this in the stream:
+
+```json
+{"event_id":"evt-batch_50-forged","recipient_id":"CT-033857",
+ "brand_code":"KAROO","type":"delivered"}
+```
+
+An event claiming to be Karoo, naming a contact that belongs to Kilele,
+delivered inside a Marrakech batch. Its own id says `forged`.
+
+It was discarded without anything being written, because of two decisions
+taken before it was ever seen: the provider's `brand_code` is never read, and
+`recipient_id` is resolved only against contacts of the brand whose send is
+being synced. Either shortcut — trusting the label, or resolving the reference
+globally — would have written another tenant's row.
+
+This is the strongest evidence in the project that the isolation work was not
+theoretical, and it is now a test.
+
+### Two mistakes, both found by running it
+
+1. **The applier was unreachable.** It was written into the `app` schema,
+   which is deliberately not exposed through the API — that being the whole
+   reason the isolation predicate lives there. But this function has to be
+   called *by* the application, so it belongs in `public`, with execute granted
+   to `service_role` alone. The first sync failed with "Could not find the
+   function", which is the schema doing exactly what it was set up to do.
+2. **It used a temporary table across two statements.** Rewritten as one
+   statement of common table expressions, which is simpler and genuinely
+   atomic: a page of reports now applies in full or not at all, so an
+   interrupted sync cannot leave a recipient marked delivered while the
+   matching engagement row is missing.
+
+### Where the AI was overruled
+
+- It proposed saving the cursor before applying a page, "to avoid reprocessing".
+  Refused: a crash between the two would skip a page that was never applied.
+  The cursor is saved afterwards, and reprocessing is free because the same
+  report cannot be applied twice.
+- It proposed taking the brand from the event's `brand_code`, which is what
+  the field appears to be for. Refused — and the forged event proved the
+  refusal right within the hour.
+- It proposed last-write-wins for delivery status. Refused: a stale
+  `delivered` would resurrect a bounced address, which is the precise failure
+  the brief describes.
