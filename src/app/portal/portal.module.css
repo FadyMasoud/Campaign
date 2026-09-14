@@ -211,3 +211,27 @@
   color: var(--color-text-faint);
   text-wrap: pretty;
 }
+
+/* Refused rows are stated next to the totals, not tucked away on another
+   page: a customer count read without knowing some rows never arrived is a
+   number that quietly misleads. */
+.refused {
+  margin-block-start: var(--space-4);
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+  background-color: var(--color-warning-soft);
+  border-inline-start: 3px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  text-wrap: pretty;
+}
+
+.link {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.link:hover {
+  color: var(--color-accent-hover);
+}

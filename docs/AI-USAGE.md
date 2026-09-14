@@ -210,3 +210,74 @@ the public endpoint while the admin API does not. So the six seeded accounts
 could only have been created by an admin, and Google is the realistic route
 by which an outsider arrives authenticated. That is exactly the case
 `/no-access` exists for.
+
+---
+
+## Phase 3 — loading the data
+
+| File | Origin | Author's involvement |
+| --- | --- | --- |
+| `supabase/migrations/…_import_runs_and_issues.sql` | AI-generated | Author required refusals and warnings to be separate columns, not one "problems" count |
+| `supabase/migrations/…_import_issue_summary.sql` | AI-generated | The SECURITY INVOKER choice was checked explicitly against the definer used in phase 1 |
+| `src/lib/import/normalise.ts` | AI-generated | Every mapping argued from counted values; the consent default was the author's call |
+| `src/lib/import/dialect.ts`, `rows.ts` | AI-generated | The refuse-vs-reroute decision for wrong-brand rows was the author's |
+| `scripts/import-seed.ts` | AI-generated | Bulk loading strategy discussed before writing |
+| `tests/normalise.test.ts`, `tests/import.test.ts` | AI-generated | Author required inputs be taken from the real files, not invented |
+| `src/app/portal/imports/*` | AI-generated | Copy reviewed line by line |
+
+### The data was counted before any code was written
+
+Four reconnaissance passes over the exports came first, and each changed the
+design:
+
+1. **Three dialects.** Comma against semicolon, a byte order mark on the Kilele
+   files, and three spellings of the same column (`external_id`, `External Id`,
+   `e_mail`). Snake-casing every heading collapses most of it; a four-entry
+   alias table handles the French column names.
+2. **Naive column splitting misaligns.** An early `cut`-based tally reported
+   timestamps in the status column. The fields are quoted and contain embedded
+   commas and newlines — about twenty Kilele rows span two lines. This is why a
+   real parser is used rather than `split(',')`.
+3. **The vocabularies.** Eleven spellings of status, thirteen of consent,
+   twenty-three of country. All mapped from counted values.
+4. **The traps.** 400 rows declaring the wrong brand, a header line repeated
+   mid-file, three NUL bytes, a campaign whose parent belongs to another brand,
+   633 results naming campaigns that are not in the export.
+
+### Where the AI was overruled
+
+- It proposed **re-routing** rows that declare another brand to the brand they
+  name. Refused: an export for one brand has no business creating rows in
+  another, and silently moving 400 customers between tenants is the exact
+  failure this project guarantees against. They are refused and counted.
+- It proposed **repairing** invalid email addresses by stripping internal
+  spaces. Refused: `john doe@vg-eval.test` minus the space is a guess about who
+  that person is, and mail to a guessed address is worse than no mail.
+- It proposed **stripping** the NUL bytes so the rows could load. Refused: the
+  byte sits inside a name, and editing somebody's name to something nobody
+  chose is not a fix.
+- It proposed **dropping** the 633 Moroccan results whose campaign is missing.
+  Refused: unsubscribes and complaints are among them, and losing those would
+  leave the portal believing people were contactable who had asked not to be.
+  They are kept with no campaign attached.
+
+### Two bugs the tests found
+
+1. **A confident wrong phone number.** The first length check accepted 8–15
+   digits, which turned `025701347763` into `+25425701347763` — nobody's
+   number. Replaced with a per-market numbering plan of exactly nine
+   significant digits.
+2. **The fix then broke something else.** Requiring numbers to match the
+   brand's own country rejected 6,493 Karoo contacts holding valid Kenyan
+   `+254` numbers. A number that states its country code is unambiguous
+   wherever it appears; the market a brand sells in does not constrain where
+   its customers hold a phone.
+
+### A self-inflicted one worth recording
+
+The importer died mid-run on `invalid byte sequence for encoding "UTF8"`. The
+guard against NUL bytes had been written as `split(NUL).join('\0')` — and `\0`
+in JavaScript *is* the NUL character, so it replaced NUL with NUL and did
+nothing. It now joins with a readable `<NUL>` marker, and the database writer
+strips NUL from quoted values as well, because the value echoed back into an
+error report is arbitrary input from a file nobody controls.

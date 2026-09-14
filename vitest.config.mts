@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 /*
@@ -12,6 +13,12 @@ import { defineConfig } from 'vitest/config'
  * copy of process.env.
  */
 export default defineConfig({
+  resolve: {
+    // `@/…` is configured for TypeScript and for Next.js in tsconfig.json, but
+    // Vitest resolves modules itself and does not read the paths from there.
+    // Without this the unit tests cannot import anything from src/.
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],

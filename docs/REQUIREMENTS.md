@@ -13,7 +13,7 @@ Status: ☐ not started · ◐ in progress · ☑ done
 | --- | --- | --- | --- |
 | 1 | Three brands live. Six logins, each landing in its own portal, at an openable URL, **whichever way they sign in**. Owners send, analysts can't, outsiders get in nowhere. | 2 | ◐ |
 | 2 | A brand sees its own data and nothing from another brand — on every route, **including ones added later**. | 1 | ☑ |
-| 3 | Data loads; the marketer sees what didn't and why. Loading the same export twice leaves **one** set of customers. | 3 | ☐ |
+| 3 | Data loads; the marketer sees what didn't and why. Loading the same export twice leaves **one** set of customers. | 3 | ☑ |
 | 4 | Numbers are right. Where two careful people could count differently, **say on screen which way you counted**. | 4 | ☐ |
 | 5 | As usable for the 90× brand as the small one. | 4 | ☐ |
 | 6 | Sending is safe and honest. Confirmation count = what is approved. No double-send, no silent half-send. Past approvals still read as approved. | 5 | ☐ |
@@ -29,7 +29,7 @@ Status: ☐ not started · ◐ in progress · ☑ done
 | --- | --- | --- |
 | Live URL | Deploy (Vercel) | ☐ |
 | Six logins — email **and password** for each | Phase 2 | ☑ |
-| Confirmation Google sign-in is live | Phase 2 — code done, provider off | ◐ |
+| Confirmation Google sign-in is live | Phase 2 — verified end to end | ☑ |
 | Supabase project URL + anon key | Have both | ☑ |
 | Table **and function** names | Phase 1 | ☑ |
 | Which key the deployed app uses | Publishable, everywhere user-facing | ◐ |
@@ -230,3 +230,74 @@ prefetches.
 - `external.google: false` — Google sign-in is written and wired end to end,
   but the provider is off, so the button cannot work until it is enabled and a
   Google Cloud OAuth client exists.
+
+**Both were resolved after this phase.** Google is live (verified end to end —
+a Google account now exists in `auth.users` that no script created), and
+sign-up was deliberately left open: Supabase counts a first-time Google
+identity as a sign-up, so closing it refuses every Google login with
+`signup_disabled`. Open sign-up plus `/no-access` is what makes "sign in
+whichever way you like" and "outsiders get in nowhere" true at the same time.
+
+### Phase 3 — loading the data
+
+**What is in the database now:**
+
+| Brand | Customers | Campaigns | Results |
+| --- | --- | --- | --- |
+| Kilele Rides | 81,842 | 44 | 301,209 |
+| Karoo Coaches | 12,406 | 19 | 69,100 |
+| Marrakech Express | 928 | 6 | 940 |
+
+Kilele is **88×** Marrakech, which is the "90× brand" the brief describes.
+
+**Loading the same export twice leaves one set of customers.** Proven, not
+asserted: the entire import was run twice and the second run reported
+`created 0` for every file with row counts unchanged. `tests/import.test.ts`
+re-runs the real importer on a real file and fails if anything is created.
+
+**Rows refused, and why.** 1,233 rows across all brands were refused. Every one
+is recorded with its line number, the field, and the offending value, and is
+visible to the marketer at `/portal/imports`.
+
+| Reason | Rows | Decision |
+| --- | --- | --- |
+| `unreachable` | 759 | No usable email *and* no usable phone — contactable on no channel |
+| `wrong_brand` | 400 | 312 rows in the Kilele export declare KAROO; 88 in the Karoo export declare KILELE |
+| `status_unknown` | 46 | Columns shifted by one, so `City` landed in the status field |
+| `status_missing` | 24 | Blank status; every count depends on it, so it is not guessed |
+| `nul_byte` | 3 | A NUL byte in a name — PostgreSQL cannot store it, and editing a name is not ours to do |
+| `repeated_header_row` | 1 | The header line appears again mid-file |
+| `unknown_contact_reference` | 2,379 | Results belonging to customers who were themselves refused |
+
+**Assumptions made rather than refusals, all reported as warnings:**
+
+- `consent_absent` (10,056) — blank consent is read as **no**. The only default
+  in the importer, and deliberately the cautious direction: the absence of a
+  recorded yes cannot become permission to contact someone.
+- `phone_unreadable` (22,343) — kept the customer, dropped the number. 21,974
+  of these are twelve digits behind a single zero (`025710676604`), leaving
+  eleven significant digits where all three markets use nine.
+- `email_invalid` (1,105) — address dropped, customer kept if reachable by
+  phone. Not repaired: deleting the space from `john doe@vg-eval.test` is a
+  guess at who that person is.
+- `date_ambiguous` (452) — `05/03/2026` read day-first, with the assumption
+  named. This is requirement 4 applied to one field.
+- `unknown_campaign_reference` (12 campaigns, 633 results) — the Moroccan
+  results name campaigns absent from that export. The results are **kept**
+  with no campaign attached, because among them are unsubscribes and
+  complaints; dropping them would leave the portal believing people were
+  contactable who had asked not to be.
+
+**The cross-brand parent.** Karoo campaign `CMP-014` names `KIL-0007`, a Kilele
+campaign, as its parent. The database refuses that link structurally, so the
+importer keeps the stated reference in `parent_external_id`, leaves the
+resolved link empty, and reports it. Asserted in `tests/import.test.ts`.
+
+**Two things the tests caught, not the author:**
+
+1. A phone-number length check of "8 to 15 digits" turned `025701347763` into
+   a confident `+25425701347763`, which is nobody's number. Replaced with a
+   per-market numbering plan.
+2. That same plan then rejected 6,493 Karoo contacts holding valid Kenyan
+   `+254` numbers, because it insisted a number match the brand's own country.
+   A number that states its country code is unambiguous wherever it turns up.

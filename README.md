@@ -11,10 +11,16 @@ work only with their own growth data:
 
 Each brand has an **owner** (can send campaigns) and an **analyst** (read-only).
 
-> **Status:** Phase 2 — sign-in. Six accounts sign in and land in their own
-> brand's portal. Google sign-in is wired end to end but the provider is not
-> yet enabled on the Supabase project. Importing the real data is phase 3, so
-> the portal currently shows an empty state.
+> **Status:** Phase 3 — the data is loaded. Six accounts sign in (email or
+> Google) and land in their own brand's portal, which now holds 95,176
+> customers, 69 campaigns and 371,249 recorded results across the three brands.
+> Campaign analytics are phase 4.
+
+| Brand | Customers | Campaigns | Results |
+| --- | --- | --- | --- |
+| Kilele Rides | 81,842 | 44 | 301,209 |
+| Karoo Coaches | 12,406 | 19 | 69,100 |
+| Marrakech Express | 928 | 6 | 940 |
 
 ## The six logins
 
@@ -167,6 +173,61 @@ campaign-portal/
 | `npm test` | Integration tests (needs `.env.local`) |
 | `npm run schema:build` | Regenerate `schema.sql` from `supabase/migrations/` |
 | `npm run seed:users` | Create or reset the six portal logins |
+| `npm run import:seed` | Load the seed exports (`-- --dry-run` to parse without writing) |
+
+---
+
+## Loading the data
+
+```bash
+npm run import:seed -- --dry-run   # parse and report, write nothing
+npm run import:seed                # load everything
+```
+
+**Safe to run repeatedly.** Customers and campaigns are matched on
+`(brand_id, external_id)` and updated in place; results are matched on the
+provider's own reference and ignored if already present. Running the whole
+import a second time reports `created 0` for every file and leaves the row
+counts unchanged — [tests/import.test.ts](tests/import.test.ts) re-runs the
+real importer and fails if anything is created.
+
+### What the exports actually contain
+
+The three brands export in three different dialects, and none of it was
+assumed — the files were counted first:
+
+- **Comma against semicolon**, a byte order mark on the Kilele files, and three
+  spellings of the same column (`external_id`, `External Id`, `e_mail`).
+- **Eleven spellings of `status`** (`active`, `ACTIVE`, `Active`, `active `,
+  `unsubscribe`, …), **thirteen of `consent_marketing`** (`true`, `1`, `TRUE`,
+  `yes`, `Y`, `f`, …), and **twenty-three of `country`** (`KE`, `KEN`, `kenya`,
+  and `254`, the dialling code, in the country column).
+- **Quoted fields containing commas and newlines** — about twenty Kilele rows
+  span two lines, which is why the files are read with a parser and not split
+  on the delimiter.
+
+### What was refused, and what was assumed
+
+Nothing is stored in a half-corrected form. A refused row is not in the portal;
+a warning means the row loaded with a field dropped or a stated assumption
+applied. Both are visible to the marketer at `/portal/imports`, with the line
+number and the offending value.
+
+The decisions worth knowing about:
+
+| Situation | What happens | Why |
+| --- | --- | --- |
+| Row declares another brand (400 rows) | Refused, in both brands | An export for one brand has no business creating rows in another. Re-routing them would be kinder and no safer |
+| Blank consent (10,056 rows) | Read as **no** | The only default in the importer, deliberately cautious: the absence of a recorded yes cannot become permission to contact someone |
+| Invalid email (1,105 rows) | Address dropped, customer kept if reachable by phone | Not repaired — deleting the space from `john doe@vg-eval.test` is a guess about who that person is |
+| Unreadable phone (22,343 rows) | Number dropped, customer kept | 21,974 are twelve digits behind a zero, leaving eleven significant digits where all three markets use nine |
+| `05/03/2026` (452 rows) | Read day-first, assumption reported | Genuinely ambiguous; the portal says which way it read it |
+| Results naming a missing campaign (633) | **Kept**, with no campaign attached | Unsubscribes and complaints are among them; dropping them would leave the portal believing people were contactable who had asked not to be |
+| NUL byte in a name (3 rows) | Refused | PostgreSQL cannot store one, and rewriting somebody's name is not a fix |
+
+A Karoo campaign names `KIL-0007` — a Kilele campaign — as its parent. The
+database refuses that link structurally, so the stated reference is kept
+verbatim, the resolved link is left empty, and the marketer is told.
 
 ---
 

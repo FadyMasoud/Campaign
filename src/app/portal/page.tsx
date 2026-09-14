@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { requireBrand } from '@/lib/auth/dal'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { signOut } from '@/lib/auth/actions'
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
  */
 export const dynamic = 'force-dynamic'
 
-type Totals = { contacts: number; campaigns: number; events: number }
+type Totals = { contacts: number; campaigns: number; events: number; rejected: number }
 
 /**
  * Counts what this brand can see.
@@ -29,16 +30,20 @@ type Totals = { contacts: number; campaigns: number; events: number }
 async function readTotals(): Promise<Totals> {
   const supabase = await createServerSupabaseClient()
 
-  const [contacts, campaigns, events] = await Promise.all([
+  const [contacts, campaigns, events, rejected] = await Promise.all([
     supabase.from('contacts').select('*', { count: 'exact', head: true }),
     supabase.from('campaigns').select('*', { count: 'exact', head: true }),
     supabase.from('contact_events').select('*', { count: 'exact', head: true }),
+    // Refused rows are surfaced on the landing screen rather than buried, so
+    // nobody reads a customer count without knowing some rows did not make it.
+    supabase.from('import_issues').select('*', { count: 'exact', head: true }).eq('severity', 'rejected'),
   ])
 
   return {
     contacts: contacts.count ?? 0,
     campaigns: campaigns.count ?? 0,
     events: events.count ?? 0,
+    rejected: rejected.count ?? 0,
   }
 }
 
@@ -111,6 +116,23 @@ export default async function PortalPage() {
                 </dd>
               </div>
             </dl>
+          )}
+
+          {totals.rejected > 0 ? (
+            <p className={styles.refused}>
+              <strong>{totals.rejected.toLocaleString('en')} rows were refused</strong>{' '}
+              during import and are not counted above.{' '}
+              <Link href="/portal/imports" className={styles.link}>
+                See what did not load and why
+              </Link>
+              .
+            </p>
+          ) : (
+            <p className={styles.footnote}>
+              <Link href="/portal/imports" className={styles.link}>
+                Import history
+              </Link>
+            </p>
           )}
         </section>
 
