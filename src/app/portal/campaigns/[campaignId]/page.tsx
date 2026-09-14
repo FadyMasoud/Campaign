@@ -9,6 +9,7 @@ import {
   getEngagementDetail,
   rate,
 } from '@/lib/analytics/queries'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { BasisTag, CountingRule } from '../../basis'
 import styles from '../campaigns.module.css'
 
@@ -105,6 +106,8 @@ export default async function CampaignDetailPage({
           figure is reproduced exactly as the provider gave it.
         </CountingRule>
       ) : null}
+
+      <SendPanel campaignId={campaign.campaign_id} role={brand.role} />
 
       {campaign.parent_external_id ? (
         <p className={styles.warn}>
@@ -229,6 +232,76 @@ export default async function CampaignDetailPage({
         </section>
       ) : null}
     </main>
+  )
+}
+
+/**
+ * The send affordance, and the send record once there is one.
+ *
+ * An analyst is told plainly that they cannot send, rather than simply not
+ * being shown the button — a control that silently vanishes leaves someone
+ * wondering whether the feature is broken or they are not allowed. Hiding it
+ * stops nobody determined in any case: the guarantee is the insert policy on
+ * campaign_sends, which requires app.is_brand_owner.
+ */
+async function SendPanel({ campaignId, role }: { campaignId: string; role: 'owner' | 'analyst' }) {
+  const supabase = await createServerSupabaseClient()
+
+  const { data: send } = await supabase
+    .from('campaign_sends')
+    .select('id, status, approved_count, requested_email, approved_at')
+    .eq('campaign_id', campaignId)
+    .neq('status', 'failed')
+    .maybeSingle<{
+      id: string
+      status: string
+      approved_count: number
+      requested_email: string
+      approved_at: string
+    }>()
+
+  if (send) {
+    return (
+      <section className={styles.panel} aria-labelledby="send">
+        <div className={styles.panelHead}>
+          <h2 id="send" className={styles.panelTitle}>
+            Sent
+          </h2>
+        </div>
+        <p className={styles.lede}>
+          {send.approved_count.toLocaleString('en')} recipients, approved by{' '}
+          {send.requested_email}. This campaign cannot be sent again.{' '}
+          <Link href={`/portal/sends/${send.id}`} className={styles.link}>
+            See the send record
+          </Link>
+          .
+        </p>
+      </section>
+    )
+  }
+
+  return (
+    <section className={styles.panel} aria-labelledby="send">
+      <div className={styles.panelHead}>
+        <h2 id="send" className={styles.panelTitle}>
+          Send
+        </h2>
+      </div>
+      {role === 'owner' ? (
+        <p className={styles.lede}>
+          <Link href={`/portal/campaigns/${campaignId}/send`} className={styles.link}>
+            Review the audience and send this campaign
+          </Link>
+          . You will see exactly who it goes to, and how many, before anything
+          is sent.
+        </p>
+      ) : (
+        <p className={styles.lede}>
+          This account is an analyst, so it cannot send campaigns. The database
+          refuses the write, not just this screen.
+        </p>
+      )}
+    </section>
   )
 }
 

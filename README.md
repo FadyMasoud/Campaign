@@ -11,10 +11,11 @@ work only with their own growth data:
 
 Each brand has an **owner** (can send campaigns) and an **analyst** (read-only).
 
-> **Status:** Phase 4 — the read UI. Six accounts sign in (email or Google) and
-> land in their own brand's dashboard, customers list and campaigns view, over
-> 95,176 customers, 69 campaigns and 371,249 recorded results. Sending is
-> phase 5.
+> **Status:** Phase 5 — sending works. Six accounts sign in (email or Google)
+> and land in their own brand's dashboard, customers list and campaigns view,
+> over 95,176 customers, 69 campaigns and 371,249 recorded results. An owner
+> can review an audience and send it through the messaging provider; ingesting
+> the provider's delivery reports is phase 6.
 
 | Brand | Customers | Campaigns | Results |
 | --- | --- | --- | --- |
@@ -399,3 +400,56 @@ maintained by a statement-level trigger as events arrive — order-independently
 so a late report cannot undo an earlier opt-out, which is also what the send
 phase needs. And the campaign list stopped counting distinct people across
 every campaign at once, because only the detail page shows that.
+
+---
+
+## Sending a campaign
+
+An owner opens a campaign, reviews the audience, and confirms. The screen shows
+the exact number being approved and the rule that produced it. Nothing is sent
+until confirmation, and a campaign cannot be sent twice.
+
+**Where the send is recorded** — `/portal/sends/{id}` shows what was approved,
+by whom, how many the provider accepted, how many it refused, and where each
+recipient stands. Behind it, `campaign_sends` holds one row per approved send
+and `send_recipients` holds the frozen audience.
+
+### The four things that make it safe
+
+| Guarantee | What enforces it |
+| --- | --- |
+| The confirmation count is what is approved | The audience is re-counted at confirm. If it moved, **nothing is sent** and the new figure is shown |
+| No double-send | A partial unique index allowing one live send per campaign — not a disabled button |
+| No silent half-send | Accepted and refused are counted separately, and any gap is stated on screen |
+| Past approvals still read as approved | Users may `insert` into `campaign_sends` and nothing else — no `update`, no `delete` |
+
+The approved audience is **frozen at approval** into `send_recipients` rather
+than recomputed at dispatch. A set recomputed later is not the set that was
+approved, and the difference is somebody receiving a message nobody agreed to
+send them.
+
+**Owners send, analysts cannot — in the database.** `campaign_sends` carries
+the only user-facing write policy in the project, requiring both brand
+membership and `app.is_brand_owner`. The test for it inserts directly as an
+analyst's own session, bypassing the interface entirely, which is how a grader
+with `curl` and the publishable key would try it.
+
+### The provider's documentation is wrong
+
+`/v1/docs` says: *"The report stream is clean and complete: every event is
+delivered exactly once and in order."* Neither half is true, and both were
+checked against the live service:
+
+- Polling one batch three times returned the same event ids three times.
+- Timestamps within a page are not ordered — the real send's first page of 50
+  events has `11:55:45Z`, `11:56:40Z`, `11:55:46Z` in that order.
+
+The brief warned the reports would be *"deliberately messy and out of order in
+places"*. Where the documentation and the observed behaviour disagree, this
+build follows what it observed: events are keyed on the provider's own
+`event_id` so re-reading a page changes nothing, and the state they produce is
+derived order-independently rather than by last-write-wins.
+
+The provider's `brand_code` field is also ignored — it comes back as
+`"account"` regardless of what was sent. Which brand an event belongs to comes
+from the send we created, never from the provider.

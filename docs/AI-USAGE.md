@@ -347,3 +347,71 @@ portal layout has already started streaming. The page content is correct and
 leaks nothing — verified by checking the response for another brand's
 identifiers and finding none — but the status is wrong. It is recorded as a
 known issue rather than quietly left for a grader to find.
+
+---
+
+## Phase 5 — sending
+
+| File | Origin | Author's involvement |
+| --- | --- | --- |
+| `supabase/migrations/…_sending.sql` | AI-generated | The one-live-send-per-campaign index, rather than a form token, was the author's call |
+| `src/lib/provider/dispatcher.ts` | AI-generated | Written only after the real API was probed; nothing about it was guessed |
+| `src/lib/send/audience.ts` | AI-generated | One audience definition shared by preview and send was a stated requirement |
+| `src/lib/send/actions.ts`, `dispatch.ts` | AI-generated | Approving as the user rather than as admin is the point, and was insisted on |
+| `src/app/portal/campaigns/[campaignId]/send/*`, `src/app/portal/sends/[sendId]/*` | AI-generated | Copy reviewed line by line |
+| `tests/sending.test.ts` | AI-generated | The attacks were taken from the brief verbatim |
+
+### The API was read and probed, never guessed
+
+The build guide says the provider's docs must be pasted in rather than
+invented. They were fetched from `/v1/docs` and then tested against the live
+service before any code was written. Three things came out of that:
+
+1. **The `Idempotency-Key` header is real.** Posting the same key twice
+   returned the same `batch_id`; omitting it produced a new one. That is what
+   makes a retry after a timeout safe, so the send's own id is used as the key.
+2. **The documentation is wrong about the event stream.** It states *"every
+   event is delivered exactly once and in order"*. Polling one batch three
+   times returned the same event ids three times, and timestamps within a page
+   are not ordered. The brief had warned the reports would be messy; the docs
+   claim otherwise; the observed behaviour settles it.
+3. **The provider's `brand_code` is useless.** It returns `"account"` whatever
+   is sent. Using it to decide which brand an event belongs to would let the
+   provider assign rows to the wrong tenant, so it is ignored entirely.
+
+### Where the AI was overruled
+
+- It proposed a form-generated idempotency token to stop double-submits.
+  Refused: that defends one browser tab against itself and nothing else. Two
+  sessions would each carry their own token and both would succeed. Replaced
+  with a partial unique index, which is what actually makes the race safe.
+- It proposed writing the approval with the admin client "for reliability".
+  Refused outright — that would bypass the owner policy, which is the single
+  thing the brief asks to be enforced for this feature.
+- It proposed recomputing the audience at dispatch time. Refused: the list is
+  frozen at approval, because a set recomputed later is not the set that was
+  approved.
+- It proposed treating a partial acceptance as success. Refused: accepted and
+  refused counts are stored separately and the gap is stated on screen, since
+  a send that quietly reached fewer people than approved is precisely the
+  failure the brief names.
+
+### Two problems found by running it
+
+1. **`server-only` blocks a plain Node script**, which is exactly its job. The
+   end-to-end send had to be driven with `--conditions=react-server`, the
+   condition the package is built around. That the guard fired is evidence it
+   works.
+2. **The test fixtures exhausted themselves.** Each sending test needs a
+   campaign with no live send, and Marrakech has six; holding sends until the
+   end of the file ran out part-way through. The tests were wrong, not the
+   code — cleanup moved to `afterEach`.
+
+### A real send was made
+
+Marrakech `MAR-0001`: 240 approved, 240 frozen, 240 accepted by the provider,
+batch `batch_50e1f5a496627f640a36`. A first attempt was made through a harness
+that passed `approved_count: 0`, which would have displayed as a false
+half-send; that record was deleted and the send redone with the count a
+marketer would actually have seen, rather than left in the database as a
+misleading artefact.

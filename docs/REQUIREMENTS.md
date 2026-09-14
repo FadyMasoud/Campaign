@@ -11,12 +11,12 @@ Status: ☐ not started · ◐ in progress · ☑ done
 
 | # | Requirement | Phase | Status |
 | --- | --- | --- | --- |
-| 1 | Three brands live. Six logins, each landing in its own portal, at an openable URL, **whichever way they sign in**. Owners send, analysts can't, outsiders get in nowhere. | 2 | ◐ |
+| 1 | Three brands live. Six logins, each landing in its own portal, at an openable URL, **whichever way they sign in**. Owners send, analysts can't, outsiders get in nowhere. | 2 | ☑ |
 | 2 | A brand sees its own data and nothing from another brand — on every route, **including ones added later**. | 1 | ☑ |
 | 3 | Data loads; the marketer sees what didn't and why. Loading the same export twice leaves **one** set of customers. | 3 | ☑ |
 | 4 | Numbers are right. Where two careful people could count differently, **say on screen which way you counted**. | 4 | ☑ |
 | 5 | As usable for the 90× brand as the small one. | 4 | ☑ |
-| 6 | Sending is safe and honest. Confirmation count = what is approved. No double-send, no silent half-send. Past approvals still read as approved. | 5 | ☐ |
+| 6 | Sending is safe and honest. Confirmation count = what is approved. No double-send, no silent half-send. Past approvals still read as approved. | 5 | ☑ |
 | 7 | Provider talks back over time, out of order, while the app isn't looking. "Who's contactable" stays correct. | 6 | ☐ |
 | 8 | **At least one test that fails if brand isolation is removed.** | 1 | ☑ |
 | 9 | Shared link safe for a stranger: one campaign's aggregates, nothing reachable by guessing the URL or getting past the password. | 7 | ☐ |
@@ -39,8 +39,8 @@ Status: ☐ not started · ◐ in progress · ☑ done
 | AI tools used | `docs/AI-USAGE.md` | ◐ |
 | How long it took | Track as you go | ☐ |
 | Earliest start date + notice period | Author supplies | ☐ |
-| Where send progress/results are recorded | Phase 5 | ☐ |
-| Provider key (given to graders) | From the brief email | ☐ |
+| Where send progress/results are recorded | `/portal/sends/{id}`, `campaign_sends`, `send_recipients` | ☑ |
+| Provider key (given to graders) | From the brief email — held in `.env.local` | ☑ |
 | Shared link + its password | Phase 7 | ☐ |
 | 300-word note | Phase 8 | ☐ |
 
@@ -393,3 +393,60 @@ id shows the not-found page with **zero** rows of that brand's data — verified
 (`/portal/nonexistent`) are unaffected and return 404 correctly. The public
 shared report in phase 7, where guessing actually matters, must not inherit
 this and will be checked separately.
+
+### Phase 5 — sending
+
+**Where a send's progress and results are recorded** — the submission asks for
+this by name:
+
+| Where | What is in it |
+| --- | --- |
+| `/portal/sends/{id}` | The screen: approved count, accepted, refused, per-recipient status, timeline |
+| `campaign_sends` | One row per approved send — who approved it, when, how many, the provider's batch reference |
+| `send_recipients` | The frozen audience, one row per person, with their delivery status |
+| `public.send_progress(uuid)` | Recipient counts by status, SECURITY INVOKER |
+
+A real send has been made: Marrakech `MAR-0001`, 240 recipients approved and
+240 accepted, provider batch `batch_50e1f5a496627f640a36`.
+
+**The four guarantees, and what enforces each:**
+
+| Guarantee | Enforced by |
+| --- | --- |
+| The confirmation count is what is approved | The count is re-checked server-side at confirm; if it moved, nothing is sent and the new figure is shown |
+| No double-send | `campaign_sends_one_live_per_campaign`, a partial unique index — not a disabled button |
+| No silent half-send | Accepted and refused counts are stored separately and the gap is stated on screen |
+| Past approvals still read as approved | Only `insert` is granted to users; `update` and `delete` are not |
+
+**Owners send, analysts cannot** — at the database. `campaign_sends` carries
+the project's only user-facing write policy, and it requires both brand
+membership and `app.is_brand_owner`. `tests/sending.test.ts` inserts directly
+as an analyst's own session, bypassing the interface entirely, and the database
+refuses it.
+
+**The phase 1 coverage test caught this phase.** Adding a writable table turned
+`tests/isolation.test.ts` red immediately — it had been written with an empty
+allowlist and a comment predicting exactly this. The allowlist now names
+`campaign_sends` and nothing else.
+
+**The provider documentation is wrong, and it matters.** `/v1/docs` states:
+*"The report stream is clean and complete: every event is delivered exactly
+once and in order."* Neither half holds:
+
+- Polling the same batch three times returned the same event ids all three
+  times. Events repeat.
+- Within a single page, ids run ahead of timestamps —
+  `evt-…-00000` at `11:55:45Z` precedes `evt-…-00001` at `11:56:40Z`, but
+  `evt-…-00002` is `11:55:46Z`. The real send's first page of 50 events is not
+  in timestamp order.
+
+The brief warned of this (*"deliberately messy and out of order in places"*),
+so phase 6 is built against the observed behaviour, not the documented claim:
+events keyed on the provider's `event_id`, and state derived
+order-independently. The groundwork is already in place — `opted_out_at` and
+`bounced_at` are maintained with `least()`, and `tests/contactability.test.ts`
+proves a late report cannot undo an earlier opt-out.
+
+**Also never trusted: the provider's `brand_code`.** It comes back as
+`"account"` regardless of what was sent. Which brand an event belongs to is
+determined from the send we created, never from the provider's own field.

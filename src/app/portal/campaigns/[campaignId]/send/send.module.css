@@ -1,0 +1,267 @@
+.page {
+  max-inline-size: 44rem;
+  margin-inline: auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.breadcrumb {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.link {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text);
+}
+
+.lede {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}
+
+/* The count is the most important thing on the page: it is what is being
+   approved, so it is set at display size rather than tucked into a table. */
+.countPanel {
+  padding: var(--space-5);
+  border: 2px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-accent-soft);
+  text-align: center;
+}
+
+.countLabel {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.count {
+  font-family: var(--font-mono);
+  font-size: var(--text-4xl);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-tight);
+  color: var(--color-text);
+  margin-block: var(--space-2);
+}
+
+.countNote {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+  max-inline-size: var(--width-prose);
+  margin-inline: auto;
+  text-wrap: pretty;
+}
+
+.panel {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+}
+
+.panelTitle {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-block-end: var(--space-3);
+}
+
+.ruleIntro {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  margin-block-end: var(--space-2);
+}
+
+.rule {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ruleItem {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+  padding-inline-start: var(--space-5);
+  position: relative;
+}
+
+.ruleItem::before {
+  content: '✓';
+  position: absolute;
+  inset-inline-start: 0;
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-4);
+}
+
+.figure {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-sunken);
+}
+
+.figureLabel {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-block-end: var(--space-1);
+}
+
+.figureValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.table th {
+  text-align: start;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-muted);
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.table td {
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.statusCell {
+  text-transform: capitalize !important;
+  letter-spacing: normal !important;
+  font-size: var(--text-sm) !important;
+  color: var(--color-text) !important;
+  font-weight: 400 !important;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.confirm {
+  inline-size: 100%;
+  padding: var(--space-4) var(--space-5);
+  min-block-size: 3rem;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-on-accent);
+  background-color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-wrap: balance;
+}
+
+.confirm:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+}
+
+.confirm:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.confirm:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.warning {
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+  background-color: var(--color-warning-soft);
+  border-inline-start: 3px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  text-wrap: pretty;
+}
+
+.error {
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-danger);
+  background-color: var(--color-danger-soft);
+  border-inline-start: 3px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  text-wrap: pretty;
+}
+
+.empty {
+  padding: var(--space-5);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-sunken);
+}
+
+.emptyTitle {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-block-end: var(--space-2);
+}
+
+.emptyBody {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}

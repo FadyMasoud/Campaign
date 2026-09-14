@@ -272,12 +272,22 @@ describe('the guarantee covers tables that do not exist yet', () => {
     expect(failures, `tables without isolation: ${JSON.stringify(failures, null, 2)}`).toHaveLength(0)
   })
 
-  it('no table grants write access to signed-in users without an owner check', async () => {
+  it('only the send-approval table is writable by a signed-in user', async () => {
     const { data, error } = await admin.rpc('security_coverage')
     expect(error).toBeNull()
 
-    // Phase 5 introduces exactly one writable table, gated on app.is_brand_owner.
-    const ALLOWED_WRITABLE: string[] = []
+    /*
+     * Exactly one table in the project accepts a write from a signed-in user:
+     * campaign_sends, because approving a send is the one thing a person does
+     * rather than something a script does on their behalf. Its insert policy
+     * requires app.is_brand_owner, which is asserted directly in
+     * tests/sending.test.ts.
+     *
+     * This list is deliberately hard to extend by accident. Anything else
+     * becoming writable turns this red, which is the point — it caught
+     * campaign_sends itself the moment phase 5 added it.
+     */
+    const ALLOWED_WRITABLE = ['campaign_sends']
     const writable = data!
       .filter((t: { authenticated_can_write: boolean }) => t.authenticated_can_write)
       .map((t: { table_name: string }) => t.table_name)
