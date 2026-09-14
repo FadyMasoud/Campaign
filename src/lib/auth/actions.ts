@@ -1,9 +1,9 @@
 'use server'
 
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { siteOrigin } from '@/lib/auth/site-url'
 
 /**
  * Everything that starts or ends a session.
@@ -23,25 +23,6 @@ const credentialsSchema = z.object({
   password: z.string().min(1, 'Enter your password.'),
 })
 
-/**
- * Where this deployment lives, for OAuth to return to.
- *
- * Built from the request rather than a hard-coded URL so the same code works
- * on localhost, on a Vercel preview and in production. `x-forwarded-*` is what
- * the proxy in front of the app sets; `host` is the fallback for running it
- * directly.
- */
-async function siteOrigin(): Promise<string> {
-  const headerList = await headers()
-
-  const origin = headerList.get('origin')
-  if (origin) return origin
-
-  const host = headerList.get('x-forwarded-host') ?? headerList.get('host')
-  const protocol = headerList.get('x-forwarded-proto') ?? 'http'
-
-  return `${protocol}://${host}`
-}
 
 /**
  * Only ever redirect to a path inside this app.

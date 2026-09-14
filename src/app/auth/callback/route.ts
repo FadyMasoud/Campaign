@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { browsable } from '@/lib/auth/site-url'
 
 /**
  * Where Google sends the user back to.
@@ -33,7 +34,11 @@ function errorRedirect(origin: string, code: string | null): NextResponse {
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url)
+  const { searchParams, origin: rawOrigin } = new URL(request.url)
+
+  // Same normalisation as the sign-in action. Without it a round trip that
+  // began on localhost finishes on 0.0.0.0, which the browser cannot open.
+  const origin = browsable(rawOrigin)
 
   const code = searchParams.get('code')
   const error = searchParams.get('error')

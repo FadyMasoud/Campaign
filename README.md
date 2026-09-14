@@ -197,6 +197,34 @@ with no row in `brand_members` is sent to `/no-access`, which names no brand
 and shows no numbers — a stranger should not learn from an error screen which
 brands exist or how large they are.
 
+### Running Google sign-in locally
+
+Three settings have to agree, and when they do not the failure is quiet rather
+than loud.
+
+| Where | Setting | Why |
+| --- | --- | --- |
+| Google Cloud console | Authorised redirect URI `https://<project-ref>.supabase.co/auth/v1/callback` | Google returns to Supabase, never to this app |
+| Supabase → Authentication → URL Configuration | Redirect URL `http://localhost:6001/**` | Supabase validates where it is asked to send the user, and **silently falls back to the Site URL** when the address is not listed |
+| `.env.local` | `NEXT_PUBLIC_SITE_URL=http://localhost:6001` | Only needed when the host header is not a browsable address |
+
+That last one exists because of a real trap. `next dev -H 0.0.0.0` binds every
+interface so the dev server is reachable from a phone on the same network — but
+the browser then reports `0.0.0.0` as the host, and a return address built from
+that header sends the user to `http://0.0.0.0:6001/…`, which nothing can
+reliably open. `NEXT_PUBLIC_SITE_URL` overrides the guess; failing that, the
+unroutable spellings (`0.0.0.0`, `[::]`, `[::1]`) are rewritten to `localhost`
+in [src/lib/auth/site-url.ts](src/lib/auth/site-url.ts).
+
+**Sign-up must be enabled for Google to work at all.** Supabase counts a
+first-time Google identity as a sign-up, so with *Allow new users to sign up*
+turned off, a valid Google login is refused with `signup_disabled` before it
+ever reaches `/auth/callback`. Turning sign-up on is safe here and is the
+deliberate choice: a self-registered account has no row in `brand_members`, so
+it reaches `/no-access` and no data — which the isolation suite asserts. That
+combination is what makes "sign in whichever way you like" and "outsiders get
+in nowhere" both true at once.
+
 ### Applying the schema
 
 Migrations are applied with the Supabase CLI, against the hosted project:
