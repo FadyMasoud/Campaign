@@ -37,7 +37,7 @@ export default async function LoginPage({
           </p>
         </header>
 
-        <LoginForm next={next} googleError={params.error === 'google'} />
+        <LoginForm next={next} errorCode={params.error} />
       </div>
     </main>
   )

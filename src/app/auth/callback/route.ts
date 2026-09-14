@@ -15,26 +15,45 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
  * layer: a genuine Google account with no row in brand_members is sent to
  * /no-access and shown nothing.
  */
+/**
+ * Which failures deserve their own words on the sign-in screen.
+ *
+ * `signup_disabled` is the one worth singling out, because it is not a fault
+ * and the generic message actively misleads. Supabase treats a first-time
+ * Google identity as a sign-up, so when account creation is turned off, a
+ * perfectly valid Google login is refused before it ever reaches this route.
+ * Telling that person "something went wrong, try again" invites them to try
+ * again forever. They need to know an account has to be provisioned.
+ */
+const KNOWN_ERRORS = new Set(['signup_disabled', 'access_denied'])
+
+function errorRedirect(origin: string, code: string | null): NextResponse {
+  const known = code && KNOWN_ERRORS.has(code) ? code : 'google'
+  return NextResponse.redirect(`${origin}/login?error=${known}`)
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
 
   const code = searchParams.get('code')
   const error = searchParams.get('error')
+  // Supabase passes its own reason through as error_code; Google's own
+  // refusals arrive in `error` (access_denied when consent is declined).
+  const errorCode = searchParams.get('error_code') ?? error
 
-  // The user pressed cancel on Google's consent screen, or Google refused.
-  if (error) {
-    return NextResponse.redirect(`${origin}/login?error=google`)
+  if (error || errorCode) {
+    return errorRedirect(origin, errorCode)
   }
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=google`)
+    return errorRedirect(origin, null)
   }
 
   const supabase = await createServerSupabaseClient()
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
   if (exchangeError) {
-    return NextResponse.redirect(`${origin}/login?error=google`)
+    return errorRedirect(origin, exchangeError.code ?? null)
   }
 
   // Same rule as the sign-in form: only ever continue to a path inside this

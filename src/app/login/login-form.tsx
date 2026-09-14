@@ -58,15 +58,28 @@ function GoogleButton() {
   )
 }
 
-export function LoginForm({ next, googleError }: { next: string; googleError: boolean }) {
+/**
+ * Google can fail in ways that are not faults, and saying "try again" to
+ * someone whose account simply does not exist sends them round in circles.
+ */
+const GOOGLE_ERRORS: Record<string, string> = {
+  signup_disabled:
+    'That Google account is not set up for this portal. Accounts here are created by an administrator rather than by signing in, so signing in again will not help — ask to have your account added.',
+  access_denied:
+    'Google sign-in was cancelled. Nothing has changed; you can try again or use your email and password.',
+  google:
+    'Google sign-in did not complete. Try again, or use your email and password below.',
+}
+
+export function LoginForm({ next, errorCode }: { next: string; errorCode?: string }) {
   const [state, formAction] = useActionState(signInWithPassword, INITIAL)
+  const googleMessage = errorCode ? GOOGLE_ERRORS[errorCode] ?? GOOGLE_ERRORS.google : null
 
   return (
     <div className={styles.forms}>
-      {googleError ? (
+      {googleMessage ? (
         <p className={styles.error} role="alert">
-          Google sign-in did not complete. Try again, or use your email and
-          password below.
+          {googleMessage}
         </p>
       ) : null}
 
