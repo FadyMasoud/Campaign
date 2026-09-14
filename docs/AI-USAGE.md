@@ -477,3 +477,49 @@ theoretical, and it is now a test.
 - It proposed last-write-wins for delivery status. Refused: a stale
   `delivered` would resurrect a bounced address, which is the precise failure
   the brief describes.
+
+---
+
+## Phase 7 — the shared link
+
+| File | Origin | Author's involvement |
+| --- | --- | --- |
+| `supabase/migrations/…_shared_reports.sql` | AI-generated | Returning an outcome rather than the report from the anon-callable function was the author's requirement |
+| `src/lib/reports/session.ts` | AI-generated | Deriving the signing key from an existing secret rather than adding a new one was discussed and agreed |
+| `src/lib/reports/read.ts`, `actions.ts` | AI-generated | The "no id a reader could change" rule is the author's |
+| `src/app/r/[token]/*` | AI-generated | Copy reviewed line by line |
+| `tests/shared-report.test.ts` | AI-generated | Written from the stranger's position — publishable key, no session |
+
+### Where the AI was overruled
+
+- It proposed having `unlock_shared_report()` return the campaign figures on
+  success, "to save a round trip". Refused: that makes an anon-callable
+  function into a data endpoint handing out results to anyone who guesses a
+  token and a password. It returns an outcome; the figures are read separately
+  under the service role, which no browser can reach.
+- It proposed different messages for an unknown token and a wrong password,
+  as better usability. Refused — that turns the endpoint into an oracle for
+  which tokens exist. Both answer `denied`, and a withdrawn link answers the
+  same.
+- It proposed `crypto.randomUUID()` for the token. Refused: a v4 UUID carries
+  122 bits and a recognisable shape. 32 bytes from `randomBytes` instead.
+- It proposed reusing `campaign_performance()` on the public page. Refused —
+  that function returns every campaign in the brand, which is far more than
+  this page is allowed to know, and relying on filtering afterwards is exactly
+  the habit this project avoids.
+
+### Verified without a browser
+
+The machine ran out of memory during this phase — 379 MB free of 7.9 GB — and
+both `next build` and `next dev` died with V8 heap errors after serving a
+single request. Rather than claim a check that had not happened, the parts that
+could be tested directly were:
+
+- the object the public page renders, read through the real function, showing
+  aggregates only and nothing about any customer;
+- an unknown token returning null, which is what produces the 404;
+- the grant cookie, rejected when replayed against another token, when its
+  signature is altered, and when its expiry is extended.
+
+The rendered pages for this phase have still not been opened in a browser, and
+that is recorded as outstanding rather than assumed fine.

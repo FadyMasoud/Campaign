@@ -11,10 +11,12 @@ work only with their own growth data:
 
 Each brand has an **owner** (can send campaigns) and an **analyst** (read-only).
 
-> **Status:** Phase 6 — the full loop works. Six accounts sign in (email or
+> **Status:** Phase 7 — feature-complete. Six accounts sign in (email or
 > Google) and land in their own brand's portal. An owner can review an
-> audience, send it through the messaging provider, and read the delivery
-> reports back as they arrive. The password-protected shared link is phase 7.
+> audience, send it through the messaging provider, read the delivery reports
+> back as they arrive, and publish one campaign's results as a
+> password-protected link for a client with no login. What remains is phase 8:
+> the design pass, bilingual EN/AR, and deployment.
 
 | Brand | Customers | Campaigns | Results |
 | --- | --- | --- | --- |
@@ -499,3 +501,37 @@ It was discarded and nothing was written, because the provider's `brand_code`
 is never read and `recipient_id` is resolved only against contacts of the brand
 whose send is being synced. Which tenant a row belongs to is not a decision
 worth outsourcing to whoever is sending the reports.
+
+---
+
+## Sharing results with a client
+
+An owner publishes one campaign's totals as a link protected by a password,
+for a client who has no login. The link is created from **Share with a client**
+on any campaign page and can be withdrawn again at any time.
+
+The brief asks for two different things here, and they need two different
+answers:
+
+**Nothing reachable by guessing the address.** The token is 256 bits from a
+cryptographic source — not a UUID, which carries 122 bits and a recognisable
+shape. An unknown token, a withdrawn one, and a correct token with the wrong
+password all answer identically, so probing the URL space tells a stranger
+nothing about which reports exist.
+
+**Nothing reachable by getting past the password.** There is nothing else
+behind it. One token resolves to one report, which resolves to one campaign,
+and the page takes no identifier from anywhere a reader could alter. The page
+shows brand name, campaign name, channel, send date, the provider's figures and
+the event log's counts — and no customer rows, no addresses, no other campaign,
+no brand-wide totals.
+
+The password is hashed with bcrypt inside the database and never compared in
+application code. The function the public page calls returns only whether the
+door opened — never the report — so although it is callable without an account,
+it cannot be used as a data endpoint. Five wrong answers lock the report for
+fifteen minutes.
+
+Proving the reader answered the password, with no account to hang a session on,
+is an HMAC over the token and an expiry. A grant issued for one report is
+rejected against any other, and rejected if its signature or expiry is altered.

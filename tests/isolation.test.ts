@@ -272,22 +272,26 @@ describe('the guarantee covers tables that do not exist yet', () => {
     expect(failures, `tables without isolation: ${JSON.stringify(failures, null, 2)}`).toHaveLength(0)
   })
 
-  it('only the send-approval table is writable by a signed-in user', async () => {
+  it('only the two owner-gated tables are writable by a signed-in user', async () => {
     const { data, error } = await admin.rpc('security_coverage')
     expect(error).toBeNull()
 
     /*
-     * Exactly one table in the project accepts a write from a signed-in user:
-     * campaign_sends, because approving a send is the one thing a person does
-     * rather than something a script does on their behalf. Its insert policy
-     * requires app.is_brand_owner, which is asserted directly in
-     * tests/sending.test.ts.
+     * Two tables in the project accept a write from a signed-in user, and both
+     * are things a PERSON does rather than things a script does on their
+     * behalf: approving a send, and publishing a campaign's results. Both
+     * insert policies require app.is_brand_owner, asserted directly in
+     * tests/sending.test.ts and tests/shared-report.test.ts.
+     *
+     * Neither grants update or delete, which is what keeps an approval and a
+     * published report immutable.
      *
      * This list is deliberately hard to extend by accident. Anything else
      * becoming writable turns this red, which is the point — it caught
-     * campaign_sends itself the moment phase 5 added it.
+     * campaign_sends when phase 5 added it and shared_reports when phase 7
+     * did.
      */
-    const ALLOWED_WRITABLE = ['campaign_sends']
+    const ALLOWED_WRITABLE = ['campaign_sends', 'shared_reports']
     const writable = data!
       .filter((t: { authenticated_can_write: boolean }) => t.authenticated_can_write)
       .map((t: { table_name: string }) => t.table_name)

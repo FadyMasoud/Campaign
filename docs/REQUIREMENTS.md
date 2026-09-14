@@ -19,7 +19,7 @@ Status: ☐ not started · ◐ in progress · ☑ done
 | 6 | Sending is safe and honest. Confirmation count = what is approved. No double-send, no silent half-send. Past approvals still read as approved. | 5 | ☑ |
 | 7 | Provider talks back over time, out of order, while the app isn't looking. "Who's contactable" stays correct. | 6 | ☑ |
 | 8 | **At least one test that fails if brand isolation is removed.** | 1 | ☑ |
-| 9 | Shared link safe for a stranger: one campaign's aggregates, nothing reachable by guessing the URL or getting past the password. | 7 | ☐ |
+| 9 | Shared link safe for a stranger: one campaign's aggregates, nothing reachable by guessing the URL or getting past the password. | 7 | ☑ |
 | 10 | Bad input rejected not stored. Loading / empty / broken screens say so. AI tools named. | all | ◐ |
 | 11 | A real web app: phone and laptop, client-ready not demo-ready. | 8 | ☐ |
 
@@ -508,3 +508,51 @@ both a forged event and a legitimate one — the good report is still applied.
 note. Still Karoo's contactable figure, and the provider reports have now made
 the same point about Marrakech: 17 of 240 addresses bounced on first contact,
 which says the customer records were stale before the send rather than after.
+
+### Phase 7 — the shared link
+
+**For the submission.** A live report exists for Marrakech `MAR-0001`:
+
+| | |
+| --- | --- |
+| Link | `{deployed origin}/r/{token}` — created from the campaign page |
+| Password | set by the owner at publish time, shown once |
+
+The token is 256 bits from a CSPRNG (43 characters, base64url). An owner
+creates one from **Share with a client** on any campaign page, and can withdraw
+it again.
+
+**The brief asks two separate things, and they need different answers:**
+
+| Requirement | Answer |
+| --- | --- |
+| Nothing reachable by *guessing the address* | 256-bit token; an unknown token and a revoked one answer identically to a wrong password, so probing reveals nothing |
+| Nothing reachable by *getting past the password* | There is nothing else behind it. One report resolves to one campaign, and the page takes no id from anywhere a reader could change |
+
+**What the page can show, in full:** brand name, campaign name and reference,
+channel, send date, the provider's six figures, the event log's counts, and
+distinct-people counts. No customer rows, no addresses, no other campaign, no
+brand-wide totals. Verified by reading the object the page renders.
+
+**How the password is handled.** Hashed with bcrypt at work factor 12 inside
+the database and never compared in application code. `unlock_shared_report()`
+returns only `ok` / `denied` / `locked` — never the report — so although anon
+may call it, it cannot be used as a data endpoint. Five wrong answers lock the
+report for fifteen minutes.
+
+**The grant cookie.** A reader has no account, so proof that they answered the
+password is an HMAC over the token and an expiry, signed with a key derived
+from the service-role key. Tested directly: a grant is valid for its own token,
+and rejected when replayed against another token, when the signature is
+tampered with, and when the expiry is extended.
+
+**The phase 1 coverage test caught this phase too.** `shared_reports` became
+the second user-writable table and turned `tests/isolation.test.ts` red at
+once. The allowlist now names both, and both are insert-only and owner-gated.
+
+**Outstanding — not verified in a browser.** The machine ran out of memory
+part-way through this phase (379 MB free of 7.9 GB), and both `next build` and
+`next dev` died with heap errors. The data path, the unlock function, the grant
+cookie and the isolation are all covered by the 190 passing tests, but the
+rendered pages for phase 7 have not been opened. That check is outstanding and
+should be done before submission.

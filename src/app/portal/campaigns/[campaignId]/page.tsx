@@ -10,6 +10,9 @@ import {
   rate,
 } from '@/lib/analytics/queries'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { siteOrigin } from '@/lib/auth/site-url'
+import { revokeReport } from '@/lib/reports/actions'
+import { PublishReport } from './publish'
 import { BasisTag, CountingRule } from '../../basis'
 import styles from '../campaigns.module.css'
 
@@ -108,6 +111,8 @@ export default async function CampaignDetailPage({
       ) : null}
 
       <SendPanel campaignId={campaign.campaign_id} role={brand.role} />
+
+      <SharePanel campaignId={campaign.campaign_id} role={brand.role} />
 
       {campaign.parent_external_id ? (
         <p className={styles.warn}>
@@ -298,6 +303,87 @@ async function SendPanel({ campaignId, role }: { campaignId: string; role: 'owne
       ) : (
         <p className={styles.lede}>
           This account is an analyst, so it cannot send campaigns. The database
+          refuses the write, not just this screen.
+        </p>
+      )}
+    </section>
+  )
+}
+
+/**
+ * The shareable link for a client with no login.
+ *
+ * Only owners may publish, matching who may send — both are outward-facing
+ * acts with consequences the brand carries. An analyst is told so plainly
+ * rather than shown nothing, and the database refuses the insert regardless.
+ */
+async function SharePanel({ campaignId, role }: { campaignId: string; role: 'owner' | 'analyst' }) {
+  const supabase = await createServerSupabaseClient()
+  const origin = await siteOrigin()
+
+  const { data: reports } = await supabase
+    .from('shared_reports')
+    .select('id, token, created_email, created_at, view_count, revoked_at')
+    .eq('campaign_id', campaignId)
+    .is('revoked_at', null)
+    .order('created_at', { ascending: false })
+    .returns<
+      Array<{
+        id: string
+        token: string
+        created_email: string
+        created_at: string
+        view_count: number
+        revoked_at: string | null
+      }>
+    >()
+
+  const live = reports ?? []
+
+  return (
+    <section className={styles.panel} aria-labelledby="share">
+      <div className={styles.panelHead}>
+        <h2 id="share" className={styles.panelTitle}>
+          Share with a client
+        </h2>
+      </div>
+
+      {live.length > 0 ? (
+        <ul className={styles.reportList}>
+          {live.map((report) => (
+            <li key={report.id} className={styles.reportItem}>
+              <code className={styles.code}>{`${origin}/r/${report.token}`}</code>
+              <span className={styles.reportMeta}>
+                published by {report.created_email} · viewed{' '}
+                {report.view_count.toLocaleString('en')}{' '}
+                {report.view_count === 1 ? 'time' : 'times'}
+              </span>
+              {role === 'owner' ? (
+                <form action={revokeReport}>
+                  <input type="hidden" name="reportId" value={report.id} />
+                  <input type="hidden" name="campaignId" value={campaignId} />
+                  <button type="submit" className={styles.revokeButton}>
+                    Withdraw this link
+                  </button>
+                </form>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {role === 'owner' ? (
+        <>
+          <p className={styles.lede}>
+            Creates a password-protected page showing this campaign&rsquo;s
+            totals — no customer details, no other campaign — for a client who
+            has no login.
+          </p>
+          <PublishReport campaignId={campaignId} origin={origin} />
+        </>
+      ) : (
+        <p className={styles.lede}>
+          This account is an analyst, so it cannot publish results. The database
           refuses the write, not just this screen.
         </p>
       )}

@@ -25,8 +25,15 @@ import { createProxySupabaseClient } from '@/lib/supabase/proxy-client'
  * that release; the behaviour is unchanged.
  */
 
-/** Reachable without a session. Everything else requires one. */
-const PUBLIC_PATHS = ['/login', '/auth/callback', '/auth/signout']
+/**
+ * Reachable without a session. Everything else requires one.
+ *
+ * `/r` is the shared campaign report, and it is the only page in the portal
+ * meant for someone with no account. Being public here does not make it open:
+ * it is guarded by an unguessable token and a password, checked inside the
+ * database, and it can show one campaign's totals and nothing else.
+ */
+const PUBLIC_PATHS = ['/login', '/auth/callback', '/auth/signout', '/r']
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))
