@@ -11,12 +11,13 @@ work only with their own growth data:
 
 Each brand has an **owner** (can send campaigns) and an **analyst** (read-only).
 
-> **Status:** Phase 7 — feature-complete. Six accounts sign in (email or
-> Google) and land in their own brand's portal. An owner can review an
-> audience, send it through the messaging provider, read the delivery reports
-> back as they arrive, and publish one campaign's results as a
-> password-protected link for a client with no login. What remains is phase 8:
-> the design pass, bilingual EN/AR, and deployment.
+> **Status:** Phase 8 — built and designed. Six accounts sign in (email or
+> Google) and land in their own brand's portal: dashboard, customers,
+> campaigns, imports. An owner can review an audience, send it through the
+> messaging provider, read the delivery reports back as they arrive, and
+> publish one campaign's results as a password-protected link for a client
+> with no login. 190 tests pass. **Deployment is the last step** — see
+> [docs/SUBMISSION-NOTE.md](docs/SUBMISSION-NOTE.md).
 
 | Brand | Customers | Campaigns | Results |
 | --- | --- | --- | --- |

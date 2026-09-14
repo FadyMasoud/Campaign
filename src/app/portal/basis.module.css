@@ -28,9 +28,11 @@
   background-color: var(--color-success-soft);
 }
 
+/* Blue rather than grey: "derived by this portal" is a real basis, not the
+   absence of one, and greying it out would rank it below the other two. */
 .derived {
-  color: var(--color-text-muted);
-  background-color: var(--color-surface-sunken);
+  color: var(--color-info);
+  background-color: var(--color-info-soft);
 }
 
 .rule {

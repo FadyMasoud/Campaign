@@ -1,24 +1,29 @@
 import type { Metadata } from 'next'
-import { IBM_Plex_Sans, IBM_Plex_Sans_Arabic, IBM_Plex_Serif } from 'next/font/google'
+import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Serif } from 'next/font/google'
 import './globals.css'
 
 /*
- * Typography: one family across three scripts.
+ * Typography: one family, three voices.
  *
- * IBM Plex was drawn as a single system with matching Latin and Arabic faces,
- * so English and Arabic share proportions, weight and voice instead of looking
- * like two different products bolted together. That is the whole argument for
- * choosing it over pairing, say, Inter with Tajawal.
+ * IBM Plex was drawn as a single system, so the serif, the grotesque and the
+ * mono share proportions and a common skeleton. That is what carries the
+ * "classic format" half of the brief: headings set in the serif give the
+ * screens an editorial weight that lets the palette be bright without the
+ * whole thing reading as a toy.
  *
- * next/font downloads these at BUILD time and self-hosts them. Nothing is
- * requested from Google at run time, which means no third-party connection
- * from the user's browser and no layout shift while a font loads.
+ *   Serif   headings and figures with something to say
+ *   Sans    everything a person operates — labels, buttons, navigation
+ *   Mono    numbers that must line up, and identifiers meant to be copied
+ *
+ * next/font downloads these at BUILD time and self-hosts them, so nothing is
+ * requested from Google at run time: no third-party connection from the
+ * reader's browser, and no layout shift while a font loads.
  */
 
 const plexSans = IBM_Plex_Sans({
   variable: '--font-plex-sans',
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
+  weight: ['400', '500', '600', '700'],
   display: 'swap',
 })
 
@@ -29,10 +34,10 @@ const plexSerif = IBM_Plex_Serif({
   display: 'swap',
 })
 
-const plexArabic = IBM_Plex_Sans_Arabic({
-  variable: '--font-plex-arabic',
-  subsets: ['arabic'],
-  weight: ['400', '500', '600'],
+const plexMono = IBM_Plex_Mono({
+  variable: '--font-plex-mono',
+  subsets: ['latin'],
+  weight: ['400', '500'],
   display: 'swap',
 })
 
@@ -47,18 +52,20 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   /*
-   * `lang` and `dir` are hard-coded to English for now. In the language phase
-   * they become dynamic, and that single change is what flips the entire UI to
-   * right-to-left — because every stylesheet in this project uses logical
-   * properties (margin-inline, padding-block, inset-inline-start) instead of
-   * left/right. The browser resolves "inline-start" against `dir`, so the
-   * layout mirrors itself with no RTL-specific CSS to maintain.
+   * English only. An Arabic edition was in the original plan and has been
+   * dropped deliberately — it is not in the brief, and a half-translated
+   * interface is worse than an untranslated one.
+   *
+   * The stylesheets keep their logical properties (margin-inline,
+   * inset-inline-start, text-align: start) regardless. They cost nothing, they
+   * read no worse than left and right, and they mean a right-to-left edition
+   * would be a `dir` attribute rather than a second stylesheet.
    */
   return (
     <html
       lang="en"
       dir="ltr"
-      className={`${plexSans.variable} ${plexSerif.variable} ${plexArabic.variable}`}
+      className={`${plexSans.variable} ${plexSerif.variable} ${plexMono.variable}`}
     >
       <body>{children}</body>
     </html>

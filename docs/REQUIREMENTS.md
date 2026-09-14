@@ -11,7 +11,7 @@ Status: ☐ not started · ◐ in progress · ☑ done
 
 | # | Requirement | Phase | Status |
 | --- | --- | --- | --- |
-| 1 | Three brands live. Six logins, each landing in its own portal, at an openable URL, **whichever way they sign in**. Owners send, analysts can't, outsiders get in nowhere. | 2 | ☑ |
+| 1 | Three brands live. Six logins, each landing in its own portal, at an openable URL, **whichever way they sign in**. Owners send, analysts can't, outsiders get in nowhere. | 2 | ◐ |
 | 2 | A brand sees its own data and nothing from another brand — on every route, **including ones added later**. | 1 | ☑ |
 | 3 | Data loads; the marketer sees what didn't and why. Loading the same export twice leaves **one** set of customers. | 3 | ☑ |
 | 4 | Numbers are right. Where two careful people could count differently, **say on screen which way you counted**. | 4 | ☑ |
@@ -20,8 +20,8 @@ Status: ☐ not started · ◐ in progress · ☑ done
 | 7 | Provider talks back over time, out of order, while the app isn't looking. "Who's contactable" stays correct. | 6 | ☑ |
 | 8 | **At least one test that fails if brand isolation is removed.** | 1 | ☑ |
 | 9 | Shared link safe for a stranger: one campaign's aggregates, nothing reachable by guessing the URL or getting past the password. | 7 | ☑ |
-| 10 | Bad input rejected not stored. Loading / empty / broken screens say so. AI tools named. | all | ◐ |
-| 11 | A real web app: phone and laptop, client-ready not demo-ready. | 8 | ☐ |
+| 10 | Bad input rejected not stored. Loading / empty / broken screens say so. AI tools named. | all | ☑ |
+| 11 | A real web app: phone and laptop, client-ready not demo-ready. | 8 | ☑ |
 
 ## Submission checklist
 
@@ -71,12 +71,12 @@ Design against these specifically — they are stated, not guessed.
 
 ## Scope notes
 
-- **"Build only what's asked."** Bilingual EN/AR with RTL, and light/dark
-  theming, are *not* in the official case-study brief — but they **are**
-  required by the author's own build guide, which lists them under phase 8.
-  This note previously recorded them as out of scope, which was right about
-  the brief and wrong about the guide. They stay in phase 8, after the data
-  guarantees, and must not come out of the budget for data correctness.
+- **"Build only what's asked."** Light/dark theming is built. **Bilingual
+  EN/AR with RTL was dropped by decision in phase 8** — it is not in the
+  official brief, and a half-translated interface is worse than an
+  untranslated one. The stylesheets keep their logical properties regardless,
+  so a right-to-left edition would be a `dir` attribute rather than a second
+  stylesheet.
 - The brief names three views explicitly — **"a contacts view, a campaigns
   view, and a dashboard"** — and four dashboard figures: total customers, how
   many are contactable, signups per day over the last 30 days, and how each
@@ -385,14 +385,20 @@ trigger as events arrive — which is also the mechanism phase 6 needs. And
 `count(distinct)` was removed from the campaign list, because a list does not
 need distinct-people counts; only the detail page does.
 
-**Known issue, not a leak.** `notFound()` inside a matched dynamic route
-returns its page with HTTP 200, because the portal layout has already begun
-streaming and the status is committed. Asking for another brand's campaign by
-id shows the not-found page with **zero** rows of that brand's data — verified
-— but the status is wrong for crawlers and uptime checks. Routing-level 404s
-(`/portal/nonexistent`) are unaffected and return 404 correctly. The public
-shared report in phase 7, where guessing actually matters, must not inherit
-this and will be checked separately.
+**Not a defect — documented framework behaviour.** `notFound()` inside a
+matched dynamic route renders the not-found page under HTTP 200. This was
+recorded here as a known issue until the version-matched docs settled it:
+
+> "Next.js will return a `200` HTTP status code for streamed responses, and
+> `404` for non-streamed responses"
+> — `not-found.js` file convention
+
+These pages are dynamic, so they stream. Next.js handles the SEO consequence
+itself by injecting `<meta name="robots" content="noindex">` on the
+not-found response, which is verified on `/r/[token]` in phase 8. Asking for
+another brand's campaign by id shows the not-found page with **zero** rows of
+that brand's data. Routing-level 404s (`/portal/nonexistent`) are non-streamed
+and return 404.
 
 ### Phase 5 — sending
 
@@ -556,3 +562,55 @@ part-way through this phase (379 MB free of 7.9 GB), and both `next build` and
 cookie and the isolation are all covered by the 190 passing tests, but the
 rendered pages for phase 7 have not been opened. That check is outstanding and
 should be done before submission.
+
+### Phase 8 — the design pass
+
+**Navigation is a left rail, not a top bar.** Fixed rather than scrolling with
+the page: the customer list is 81,842 rows long, and navigation that
+disappears after the first screenful is navigation you have to scroll back to
+find. Below 60rem it becomes a drawer behind a menu button, and following a
+link closes it.
+
+**English only.** The bilingual EN/AR edition in the original build guide was
+dropped by decision. It is not in the official brief, and a half-translated
+interface is worse than an untranslated one. Every stylesheet keeps its
+logical properties (`margin-inline`, `inset-inline-start`, `text-align: start`)
+because they cost nothing and keep a right-to-left edition one attribute away.
+
+**The palette, as specified — and one correction made honestly.** All nine
+colours ship exactly as given. But every pair was measured against its
+background rather than eyeballed, and three cannot carry small text:
+
+| Pair | Ratio | Verdict |
+| --- | --- | --- |
+| white on Teal `#0D9488` | 3.74:1 | fills only |
+| Success `#16A34A` on white | 3.30:1 | fills only |
+| Warning `#F59E0B` on white | **2.15:1** | fills only |
+| Info `#3B82F6` on white | 3.68:1 | fills only |
+| Muted `#64748B` on page | 4.55:1 | passes |
+| Navy `#0B1F33` on page | 15.95:1 | passes |
+| Danger `#DC2626` on white | 4.62:1 | passes |
+
+WCAG AA wants 4.5:1 for body text. So each failing colour **keeps its exact
+specified value as a fill token** — the chip, the bar, the dot, the button
+background — and gains a darker shade of the *same hue* for when words sit on
+a light background. Nothing was re-hued: a marketer reading a bounce count
+still sees red, they just see one they can read.
+
+**Colour carries meaning, never decoration.** The three counting bases are now
+three hues — teal for provider-reported, green for the event log, blue for
+derived — and delivery statuses get a coloured dot beside the word, never
+instead of it.
+
+**Mobile.** The rail becomes a drawer; tables scroll inside their own
+containers so the page itself never scrolls sideways; inputs are 16px so iOS
+does not zoom on focus; touch targets are at least 44px.
+
+**Outstanding, and only the author can do these:**
+
+- **Deploy to Vercel** — the live URL is the first thing a grader opens, and
+  it is the last thing missing. `NEXT_PUBLIC_SITE_URL` must be set to the
+  deployed origin, and that origin added to Supabase's Redirect URLs.
+- **Rotate the keys.** The service-role key and the dispatcher key both passed
+  through an AI chat transcript during the build.
+- How long it took, earliest start date, notice period.

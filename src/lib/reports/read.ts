@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { cache } from 'react'
 import { createAdminSupabaseClient } from '@/lib/supabase/admin'
 
 /**
@@ -39,7 +40,7 @@ export type PublicReport = {
   publishedAt: string
 }
 
-export async function readSharedReport(token: string): Promise<PublicReport | null> {
+export const readSharedReport = cache(async (token: string): Promise<PublicReport | null> => {
   const admin = createAdminSupabaseClient()
 
   const { data: report } = await admin
@@ -106,4 +107,4 @@ export async function readSharedReport(token: string): Promise<PublicReport | nu
     hasEvents: logOpens + logClicks + logUnsubscribes > 0,
     publishedAt: report.created_at,
   }
-}
+})

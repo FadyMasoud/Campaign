@@ -316,3 +316,24 @@
   border-radius: var(--radius-sm);
   text-wrap: pretty;
 }
+
+/* Delivery status dots. Each takes the fill shade of its meaning: the bright
+   specified colours are right here, because these are marks rather than text. */
+.dotQueued,
+.dotAccepted,
+.dotDelivered,
+.dotBounced,
+.dotRejected {
+  display: inline-block;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: var(--radius-full);
+  margin-inline-end: var(--space-2);
+  vertical-align: middle;
+}
+
+.dotQueued    { background-color: var(--color-border-strong); }
+.dotAccepted  { background-color: var(--color-info-fill); }
+.dotDelivered { background-color: var(--color-success-fill); }
+.dotBounced   { background-color: var(--color-danger-fill); }
+.dotRejected  { background-color: var(--color-warning-fill); }

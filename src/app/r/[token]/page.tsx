@@ -11,17 +11,28 @@ import styles from './report.module.css'
  *
  * Reachable with no account at all — it is listed in proxy.ts as a public
  * path, and it is the only page in the portal that is.
+ */
+export const dynamic = 'force-dynamic'
+
+/*
+ * A guessed token renders the not-found page. The status is 200 rather than
+ * 404, and that is documented Next.js behaviour rather than an oversight here:
+ * "Next.js will return a 200 HTTP status code for streamed responses, and 404
+ * for non-streamed responses". This page is dynamic, so it streams.
  *
- * `noindex` matters more here than anywhere else in the app: a shared link
- * that finds its way into a search index is a shared link that is no longer
- * shared, it is published.
+ * The SEO consequence is handled by the framework, which injects
+ * <meta name="robots" content="noindex"> on the not-found response — verified
+ * on this route. Nothing about any report reaches that page: a stranger
+ * guessing gets the same empty 404 whether the token was never real, has been
+ * withdrawn, or exists and they simply do not have it.
+ *
+ * noindex is set here too, for the report itself. A shared link that finds its
+ * way into a search index is no longer shared, it is published.
  */
 export const metadata: Metadata = {
   title: 'Campaign results',
   robots: { index: false, follow: false, nocache: true },
 }
-
-export const dynamic = 'force-dynamic'
 
 const n = (value: number | null) => (value === null ? '—' : value.toLocaleString('en'))
 const percent = (a: number | null, b: number | null) =>

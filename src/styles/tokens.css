@@ -1,70 +1,109 @@
 /* =============================================================================
    DESIGN TOKENS
    The single source of truth for colour, type, space and depth.
+   Nothing outside this file contains a raw hex colour.
 
-   How theming works here, and why it is done in exactly this order:
+   THE PALETTE, AS SPECIFIED
+     Primary Navy   #0B1F33   sidebar, headings, dark-mode foundation
+     Teal           #0D9488   primary buttons, active states
+     Page           #F8FAFC   dashboard background
+     Card           #FFFFFF   tables, metrics, campaign cards
+     Muted          #64748B   labels, secondary information
+     Success        #16A34A   delivered, contactable, completed
+     Warning        #F59E0B   pending, partial, needs attention
+     Danger         #DC2626   bounces, failures, blocked actions
+     Info           #3B82F6   information, links, neutral status
 
-   1. `:root` holds the COMPLETE light palette. Every token is defined here and
-      nowhere else, so no colour can go missing in one theme.
-   2. The dark block only REDEFINES existing tokens. It never invents new ones.
-   3. Dark is applied twice, on purpose:
-        a) @media (prefers-color-scheme: dark)  -> follows the operating system,
-           guarded by :not([data-theme="light"]) so an explicit light choice
-           still wins over a dark OS setting.
-        b) [data-theme="dark"]                  -> an explicit user choice.
-      That combination is what makes a three-state toggle (light / dark /
-      system) possible without JavaScript having to re-paint the page.
+   WHY THERE ARE TWO TOKENS FOR SOME COLOURS
+   Every pair above was measured against its background rather than eyeballed,
+   and three of them cannot carry small text:
 
-   Nothing outside this file should contain a raw hex colour.
+     white on Teal #0D9488 ........ 3.74:1   fills and indicators only
+     Success #16A34A on white ..... 3.30:1   fills and indicators only
+     Warning #F59E0B on white ..... 2.15:1   fills and indicators only
+     Info #3B82F6 on white ........ 3.68:1   fills and indicators only
+
+   WCAG AA wants 4.5:1 for body text. So each of those keeps its exact
+   specified value as a FILL token — the chip, the bar, the dot, the button
+   background — and gains a darker shade of the same hue for when actual words
+   sit on a light background. Nothing has been re-hued; a marketer reading a
+   bounce count still sees red, they just see one they can read.
+
+     --color-accent   #0F766E   5.23:1     --color-accent-fill   #0D9488
+     --color-success  #15803D   4.79:1     --color-success-fill  #16A34A
+     --color-warning  #B45309   4.80:1     --color-warning-fill  #F59E0B
+     --color-info     #1D4ED8   6.41:1     --color-info-fill     #3B82F6
+     --color-danger   #DC2626   4.62:1     (passes as-is)
+
+   HOW THEMING WORKS, AND WHY IN THIS ORDER
+   1. `:root` holds the COMPLETE light palette, so no token can go missing.
+   2. The dark block only REDEFINES tokens. It never invents new ones.
+   3. Dark is applied twice: once following the OS, guarded so an explicit
+      light choice still wins, and once for an explicit dark choice.
    ========================================================================== */
 
 :root {
   color-scheme: light;
 
-  /* --- Neutrals -----------------------------------------------------------
-     A warm grey ramp rather than pure grey. Slightly warm neutrals read as
-     "paper" and stop the UI feeling like a default framework demo. */
-  --color-bg: #fbfaf8;              /* page background */
+  /* --- Brand ------------------------------------------------------------- */
+  --color-navy: #0b1f33;            /* sidebar ground, headings */
+  --color-navy-soft: #16304a;       /* raised surfaces on the sidebar */
+  --color-on-navy: #e2e8f0;         /* 13.5:1 on navy */
+  --color-on-navy-muted: #94a3b8;   /* 6.5:1 on navy */
+  /* Full-strength text on the rail and on teal fills. White in BOTH themes,
+     because the rail is navy in both — this is the one pair that must not
+     invert, and giving it its own token is what stops it being written as a
+     bare hex in a component stylesheet. */
+  --color-on-navy-strong: #ffffff;
+
+  /* --- Surfaces ----------------------------------------------------------- */
+  --color-bg: #f8fafc;              /* page background */
   --color-surface: #ffffff;         /* cards, panels, table rows */
-  --color-surface-sunken: #f4f2ee;  /* wells, table headers, code */
-  --color-border: #e7e3dc;          /* hairlines */
-  --color-border-strong: #d4cec4;   /* inputs, focus outlines at rest */
+  --color-surface-sunken: #f1f5f9;  /* wells, table headers, code */
+  --color-border: #e2e8f0;          /* hairlines */
+  --color-border-strong: #cbd5e1;   /* inputs, controls at rest */
 
-  --color-text: #1a1815;            /* body copy */
-  --color-text-muted: #6b655c;      /* labels, captions - 5.5:1 on --color-bg */
-  --color-text-faint: #8c857a;      /* decorative only, never load-bearing */
+  /* --- Text ---------------------------------------------------------------
+     Navy rather than black for body copy: 15.95:1 on the page background, and
+     it ties the reading surface to the sidebar without a second hue. */
+  --color-text: #0b1f33;
+  --color-text-muted: #64748b;      /* 4.55:1 on page — passes as body text */
+  --color-text-faint: #94a3b8;      /* 2.45:1 — decorative only, never load-bearing */
 
-  /* --- Accent -------------------------------------------------------------
-     ONE accent colour, a clay/sienna. Primary actions and active states only.
-     Restraint is the point of the "modern classic" brief: if everything is
-     emphasised, nothing is. Contrast 5.7:1 on --color-bg. */
-  --color-accent: #a8442a;
-  --color-accent-hover: #8e3821;
-  --color-accent-soft: #f7ece7;     /* tinted background for selected rows */
-  --color-on-accent: #ffffff;       /* text placed ON the accent */
+  /* --- Accent ------------------------------------------------------------- */
+  --color-accent: #0f766e;          /* teal that can carry text */
+  --color-accent-fill: #0d9488;     /* the specified teal, for blocks and bars */
+  --color-accent-hover: #115e59;
+  --color-accent-soft: #f0fdfa;     /* tinted rows and chips */
+  --color-on-accent: #ffffff;       /* 5.47:1 on --color-accent */
 
   /* --- Status -------------------------------------------------------------
-     Reserved for meaning, never decoration. These carry real weight in this
-     app: delivered / bounced / unsubscribed. */
-  --color-success: #2f6b4f;
-  --color-success-soft: #e8f1ec;
-  --color-warning: #8a6320;
-  --color-warning-soft: #f7efe0;
-  --color-danger: #a32b2b;
-  --color-danger-soft: #f8e9e9;
+     Reserved for meaning, never decoration. These carry real weight here:
+     delivered, bounced, unsubscribed, refused. */
+  --color-success: #15803d;
+  --color-success-fill: #16a34a;
+  --color-success-soft: #f0fdf4;
+  --color-warning: #b45309;
+  --color-warning-fill: #f59e0b;
+  --color-warning-soft: #fffbeb;
+  --color-danger: #dc2626;
+  --color-danger-fill: #dc2626;
+  --color-danger-soft: #fef2f2;
+  --color-info: #1d4ed8;
+  --color-info-fill: #3b82f6;
+  --color-info-soft: #eff6ff;
 
   /* --- Type ---------------------------------------------------------------
      The --font-plex-* variables are injected by next/font in layout.tsx.
-     --font-ui switches between Latin and Arabic automatically: see the
-     [lang="ar"] block at the bottom of this file. */
+     A serif for headings and a grotesque for interface text: the "classic
+     format" half of the brief lives in the type, which lets the colour be
+     bright without the whole thing reading as a toy. */
   --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-arabic: var(--font-plex-arabic), var(--font-plex-sans), sans-serif;
   --font-serif: var(--font-plex-serif), ui-serif, Georgia, serif;
-  --font-mono: ui-monospace, Menlo, Consolas, monospace;
+  --font-mono: var(--font-plex-mono), ui-monospace, Menlo, Consolas, monospace;
   --font-ui: var(--font-sans);
 
-  /* A restrained modular scale (~1.25). Editorial layouts need a few sizes
-     used confidently, not many sizes used timidly. */
+  /* A restrained modular scale (~1.25). A few sizes used confidently. */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -83,8 +122,8 @@
   --tracking-wide: 0.08em;          /* small-caps eyebrow labels */
 
   /* --- Space --------------------------------------------------------------
-     A 4px base step. Every margin and padding comes from here, so vertical
-     rhythm stays consistent without anyone eyeballing pixel values. */
+     A 4px base step, so vertical rhythm stays consistent without anyone
+     eyeballing pixel values. */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -96,58 +135,75 @@
   --space-9: 6rem;
 
   /* --- Shape and depth ----------------------------------------------------
-     Subtle depth: shadows suggest a raised sheet of paper, they do not glow. */
+     Shadows are tinted with the navy rather than black, so depth belongs to
+     the same palette as everything else. */
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-full: 999px;
 
-  --shadow-sm: 0 1px 2px rgb(26 24 21 / 0.05);
-  --shadow-md: 0 2px 4px rgb(26 24 21 / 0.06), 0 4px 12px rgb(26 24 21 / 0.05);
-  --shadow-lg: 0 4px 8px rgb(26 24 21 / 0.06), 0 12px 32px rgb(26 24 21 / 0.08);
+  --shadow-sm: 0 1px 2px rgb(11 31 51 / 0.06);
+  --shadow-md: 0 2px 4px rgb(11 31 51 / 0.06), 0 4px 12px rgb(11 31 51 / 0.06);
+  --shadow-lg: 0 4px 8px rgb(11 31 51 / 0.08), 0 12px 32px rgb(11 31 51 / 0.10);
 
   /* --- Layout ------------------------------------------------------------- */
-  --width-content: 68rem;           /* app shell max width */
+  --sidebar-width: 15rem;
+  --width-content: 72rem;           /* content column beside the sidebar */
   --width-prose: 42rem;             /* comfortable reading measure */
 
   --transition-fast: 120ms ease;
   --transition-base: 200ms ease;
 }
 
-/* --- DARK: follows the OS, unless the user explicitly chose light ---------- */
+/* --- DARK: follows the OS, unless the user explicitly chose light ----------
+   The navy is the foundation, exactly as specified: the dark theme is the
+   sidebar colour spread across the whole page, with surfaces lifted above it
+   rather than a separate grey invented for the purpose. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --color-bg: #121110;
-    --color-surface: #1a1917;
-    --color-surface-sunken: #232120;
-    --color-border: #2c2a27;
-    --color-border-strong: #403c38;
+    --color-navy: #071726;
+    --color-navy-soft: #102941;
+    --color-on-navy: #e2e8f0;
+    --color-on-navy-muted: #94a3b8;
+    --color-on-navy-strong: #ffffff;
 
-    --color-text: #f2efea;
-    --color-text-muted: #a09a90;    /* 6.8:1 on --color-bg */
-    --color-text-faint: #7d776e;
+    --color-bg: #071726;
+    --color-surface: #0b1f33;
+    --color-surface-sunken: #102941;
+    --color-border: #1c3a56;
+    --color-border-strong: #2d5175;
 
-    /* The accent is LIGHTENED for dark mode. The light-mode clay would fail
-       contrast on a dark ground. This is a token swap, not a new colour. */
-    --color-accent: #e0764f;
-    --color-accent-hover: #ee8a64;
-    --color-accent-soft: #2a1c16;
-    --color-on-accent: #1a1815;     /* dark text on a light accent */
+    --color-text: #f1f5f9;          /* 15.2:1 on the navy ground */
+    --color-text-muted: #94a3b8;    /* 6.5:1 */
+    --color-text-faint: #64748b;
 
-    --color-success: #7fbd9c;
-    --color-success-soft: #17251e;
-    --color-warning: #d6ad6a;
-    --color-warning-soft: #261f13;
-    --color-danger: #e58a8a;
-    --color-danger-soft: #2a1717;
+    /* Lightened so they carry text on a dark ground. Same hues, and the
+       measurements are in the comment beside each. */
+    --color-accent: #5eead4;        /* 11.3:1 */
+    --color-accent-fill: #0d9488;
+    --color-accent-hover: #99f6e4;
+    --color-accent-soft: #0f2e2c;
+    --color-on-accent: #071726;
 
-    /* Shadows are near-useless on dark grounds; depth comes from surface
-       lightness instead. We keep them, but subtler. */
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-    --shadow-md: 0 2px 4px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.25);
-    --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.35), 0 12px 32px rgb(0 0 0 / 0.4);
+    --color-success: #4ade80;       /* 9.6:1 */
+    --color-success-fill: #16a34a;
+    --color-success-soft: #0d2a1c;
+    --color-warning: #fcd34d;       /* 11.6:1 */
+    --color-warning-fill: #f59e0b;
+    --color-warning-soft: #2d2310;
+    --color-danger: #f87171;        /* 6.0:1 */
+    --color-danger-fill: #dc2626;
+    --color-danger-soft: #2d1516;
+    --color-info: #60a5fa;          /* 6.6:1 */
+    --color-info-fill: #3b82f6;
+    --color-info-soft: #0f2540;
+
+    /* Depth on a dark ground comes from surface lightness, not shadow. */
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 2px 4px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.45), 0 12px 32px rgb(0 0 0 / 0.5);
   }
 }
 
@@ -155,43 +211,42 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-bg: #121110;
-  --color-surface: #1a1917;
-  --color-surface-sunken: #232120;
-  --color-border: #2c2a27;
-  --color-border-strong: #403c38;
+  --color-navy: #071726;
+  --color-navy-soft: #102941;
+  --color-on-navy: #e2e8f0;
+  --color-on-navy-muted: #94a3b8;
+  --color-on-navy-strong: #ffffff;
 
-  --color-text: #f2efea;
-  --color-text-muted: #a09a90;
-  --color-text-faint: #7d776e;
+  --color-bg: #071726;
+  --color-surface: #0b1f33;
+  --color-surface-sunken: #102941;
+  --color-border: #1c3a56;
+  --color-border-strong: #2d5175;
 
-  --color-accent: #e0764f;
-  --color-accent-hover: #ee8a64;
-  --color-accent-soft: #2a1c16;
-  --color-on-accent: #1a1815;
+  --color-text: #f1f5f9;
+  --color-text-muted: #94a3b8;
+  --color-text-faint: #64748b;
 
-  --color-success: #7fbd9c;
-  --color-success-soft: #17251e;
-  --color-warning: #d6ad6a;
-  --color-warning-soft: #261f13;
-  --color-danger: #e58a8a;
-  --color-danger-soft: #2a1717;
+  --color-accent: #5eead4;
+  --color-accent-fill: #0d9488;
+  --color-accent-hover: #99f6e4;
+  --color-accent-soft: #0f2e2c;
+  --color-on-accent: #071726;
 
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-md: 0 2px 4px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.25);
-  --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.35), 0 12px 32px rgb(0 0 0 / 0.4);
-}
+  --color-success: #4ade80;
+  --color-success-fill: #16a34a;
+  --color-success-soft: #0d2a1c;
+  --color-warning: #fcd34d;
+  --color-warning-fill: #f59e0b;
+  --color-warning-soft: #2d2310;
+  --color-danger: #f87171;
+  --color-danger-fill: #dc2626;
+  --color-danger-soft: #2d1516;
+  --color-info: #60a5fa;
+  --color-info-fill: #3b82f6;
+  --color-info-soft: #0f2540;
 
-/* --- Arabic ---------------------------------------------------------------
-   Swapping ONE token repoints every piece of UI type at the Arabic face.
-   Direction itself is set with dir="rtl" on <html>, not here: that is the
-   browser's job, and it is what makes CSS logical properties flip. */
-:root[lang="ar"] {
-  --font-ui: var(--font-arabic);
-
-  /* Arabic letterforms have a taller x-height and no capitals, so the same
-     point size reads smaller and tighter. A nudge to line-height keeps the two
-     languages feeling like one design rather than two. */
-  --leading-normal: 1.8;
-  --leading-snug: 1.5;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 2px 4px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.45), 0 12px 32px rgb(0 0 0 / 0.5);
 }

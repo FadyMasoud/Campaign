@@ -523,3 +523,58 @@ could be tested directly were:
 
 The rendered pages for this phase have still not been opened in a browser, and
 that is recorded as outstanding rather than assumed fine.
+
+---
+
+## Phase 8 — the design pass
+
+| File | Origin | Author's involvement |
+| --- | --- | --- |
+| `src/styles/tokens.css` | AI-generated | Palette specified by the author; the accessible text shades were the AI's addition and are explained below |
+| `src/app/portal/nav.tsx`, `shell.module.css` | AI-generated | Left rail, drawer on phones — layout specified by the author |
+| `src/app/layout.tsx` | AI-generated | Arabic removed by the author's decision |
+| `docs/SUBMISSION-NOTE.md` | AI-drafted | Author supplies the three bracketed facts |
+
+### The palette was measured, not admired
+
+All nine specified colours ship exactly as given. But every pair was checked
+against its background with a contrast script rather than eyeballed, and three
+of them cannot carry small text:
+
+| Pair | Ratio |
+| --- | --- |
+| white on Teal `#0D9488` | 3.74:1 |
+| Success `#16A34A` on white | 3.30:1 |
+| Warning `#F59E0B` on white | **2.15:1** |
+| Info `#3B82F6` on white | 3.68:1 |
+
+WCAG AA wants 4.5:1 for body text. Rather than change the palette or ship text
+nobody can read, each of those keeps its exact value as a **fill** token — the
+chip, the dot, the bar, the button background — and gains a darker shade of the
+**same hue** for words on a light background. A bounce count is still red; it
+is just a red that can be read at 14px.
+
+This was the AI's proposal, not the author's instruction, and it is recorded
+here because it changes what was specified. Reverting it is a one-line edit per
+token if the exact values are wanted everywhere.
+
+### Where the AI was overruled
+
+- It proposed keeping the top navigation bar and adding a sidebar beside it.
+  Refused — two navigations is one too many.
+- It proposed a `--color-white` token for the sidebar text. Refused as
+  meaningless; it became `--color-on-navy-strong`, which says what it is for
+  and why it does not invert in dark mode.
+- It proposed leaving three bare `#ffffff` values in the sidebar stylesheet
+  since "white is white". Refused: the tokens file claims nothing outside it
+  holds a raw hex, and a claim that is only mostly true is worse than no claim.
+
+### A correction to an earlier phase
+
+Phase 4 recorded, as a known defect, that `notFound()` in a dynamic route
+returns HTTP 200. Reading the version-matched `not-found.js` documentation in
+phase 8 settled it: *"Next.js will return a 200 HTTP status code for streamed
+responses, and 404 for non-streamed responses"*, and the framework injects
+`<meta name="robots" content="noindex">` itself — verified on `/r/[token]`.
+It is documented behaviour with a built-in mitigation, not something left
+broken, and the earlier note has been corrected rather than left to mislead.

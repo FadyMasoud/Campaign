@@ -188,9 +188,11 @@
   background-color: var(--color-success-soft);
 }
 
+/* Amber, not grey. Somebody who cannot be reached is a fact worth noticing
+   when you are about to approve a send, and grey reads as "no information". */
 .reachNo {
-  color: var(--color-text-muted);
-  background-color: var(--color-surface-sunken);
+  color: var(--color-warning);
+  background-color: var(--color-warning-soft);
 }
 
 .pager {

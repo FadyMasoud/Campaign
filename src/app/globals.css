@@ -64,16 +64,6 @@ h6 {
   line-height: var(--leading-snug);
 }
 
-/* Arabic has no true serif tradition equivalent to the Latin one, and forcing
-   a Latin serif onto Arabic text produces a fallback font. Headings in Arabic
-   use the Arabic face and lean on weight for hierarchy instead. */
-:root[lang="ar"] h1,
-:root[lang="ar"] h2,
-:root[lang="ar"] h3 {
-  font-family: var(--font-arabic);
-  letter-spacing: var(--tracking-normal); /* negative tracking breaks joins */
-}
-
 p {
   text-wrap: pretty;
 }

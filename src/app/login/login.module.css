@@ -1,6 +1,7 @@
 /* Sign-in screen.
-   All spacing uses logical properties so the Arabic layout mirrors with a
-   `dir` change rather than a second stylesheet. */
+   Spacing uses logical properties throughout: they read no worse than left and
+   right, and keep a right-to-left edition a `dir` change away rather than a
+   second stylesheet. */
 
 .page {
   display: grid;
@@ -199,7 +200,6 @@
   line-height: var(--leading-snug);
   color: var(--color-danger);
   background-color: var(--color-danger-soft);
-  /* Logical property: this sits on the left in English, the right in Arabic. */
   border-inline-start: 3px solid var(--color-danger);
   border-radius: var(--radius-sm);
 }

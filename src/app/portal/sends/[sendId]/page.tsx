@@ -163,6 +163,14 @@ export default async function SendRecordPage({
               {byStatus.map((row) => (
                 <tr key={row.status}>
                   <th scope="row" className={styles.statusCell}>
+                    {/* A dot carrying the status colour, with the word beside
+                        it: colour alone would leave "delivered" and "bounced"
+                        indistinguishable to anyone who cannot separate the
+                        two hues. */}
+                    <span
+                      className={styles[`dot${row.status[0].toUpperCase()}${row.status.slice(1)}`] ?? styles.dotQueued}
+                      aria-hidden="true"
+                    />
                     {row.status}
                   </th>
                   <td className={styles.mono}>{row.recipient_count.toLocaleString('en')}</td>
