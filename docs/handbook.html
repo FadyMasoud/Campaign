@@ -1,0 +1,1027 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Campaign Portal — Project Handbook</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 10.5pt; line-height: 1.55; color: #0b1f33; margin: 0;
+  }
+  h1, h2, h3, h4 { font-family: Georgia, "Times New Roman", serif; color: #0b1f33; line-height: 1.2; }
+  h1 { font-size: 26pt; margin: 0 0 6pt; letter-spacing: -0.5pt; }
+  h2 {
+    font-size: 16pt; margin: 22pt 0 8pt; padding-bottom: 4pt;
+    border-bottom: 2pt solid #0d9488; page-break-after: avoid;
+  }
+  h3 { font-size: 12.5pt; margin: 14pt 0 5pt; page-break-after: avoid; }
+  h4 { font-size: 11pt; margin: 11pt 0 4pt; page-break-after: avoid; }
+  p, li { orphans: 3; widows: 3; }
+  ul, ol { padding-left: 16pt; margin: 6pt 0; }
+  li { margin-bottom: 3pt; }
+  code {
+    font-family: Consolas, monospace; font-size: 9pt;
+    background: #f1f5f9; padding: 1pt 3pt; border-radius: 2pt;
+  }
+  pre {
+    font-family: Consolas, monospace; font-size: 8.5pt; line-height: 1.4;
+    background: #0b1f33; color: #e2e8f0; padding: 8pt 10pt; border-radius: 4pt;
+    overflow-x: auto; page-break-inside: avoid; white-space: pre-wrap;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 8pt 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 0.5pt solid #cbd5e1; padding: 4pt 6pt; text-align: left; vertical-align: top; }
+  th { background: #f1f5f9; font-weight: 600; }
+  .cover { page-break-after: always; padding-top: 40mm; }
+  .cover .sub { font-size: 13pt; color: #64748b; margin-bottom: 20pt; }
+  .meta { font-size: 9.5pt; color: #64748b; }
+  .page-break { page-break-before: always; }
+  .box {
+    border-left: 3pt solid #0d9488; background: #f0fdfa;
+    padding: 7pt 10pt; margin: 9pt 0; page-break-inside: avoid;
+  }
+  .warn { border-left-color: #f59e0b; background: #fffbeb; }
+  .danger { border-left-color: #dc2626; background: #fef2f2; }
+  .info { border-left-color: #3b82f6; background: #eff6ff; }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-size: 8pt; font-weight: 600; padding: 1pt 5pt;
+    border-radius: 8pt; background: #0d9488; color: #fff; vertical-align: middle;
+  }
+  .tag.no { background: #dc2626; }
+  .tag.part { background: #f59e0b; }
+  .q { font-weight: 600; color: #0f766e; margin-top: 10pt; margin-bottom: 2pt; }
+  .toc a { color: #0b1f33; text-decoration: none; }
+  .toc li { margin-bottom: 4pt; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Campaign Portal</h1>
+  <p class="sub">Project handbook — business, architecture, and how every piece works</p>
+  <p class="meta">
+    Prepared for the technical interview.<br>
+    Repository: github.com/FadyMasoud/Campaign<br>
+    Live: campaign-five-flax.vercel.app<br>
+    14 commits · 11 migrations · 122 tests · 95,176 customers
+  </p>
+
+  <h3>Contents</h3>
+  <ol class="toc">
+    <li>The business and the task</li>
+    <li>The data you were given</li>
+    <li>What Supabase and Vercel are, and how they bind together</li>
+    <li>How a request actually travels</li>
+    <li>How the spreadsheets got into the database</li>
+    <li>Every page, and what it is for</li>
+    <li>Roles and permissions</li>
+    <li>Sending a campaign, and hearing back</li>
+    <li>The guarantees, and how to defend them</li>
+    <li>How it was built, from nothing</li>
+    <li>Questions you will be asked, with answers</li>
+    <li>Final submission checklist</li>
+  </ol>
+</div>
+
+<!-- ===================================================================== -->
+<h2>1 · The business and the task</h2>
+
+<h3>Who Velocity Growth are</h3>
+<p>
+  Velocity Growth is a growth consultancy. They run lifecycle and retention
+  marketing for consumer brands across the Middle East and Africa — the emails
+  and text messages a company sends its own customers to bring them back.
+</p>
+<p>
+  The commercially important sentence in their brief is this one:
+  <em>&ldquo;Several client brands live inside one product, on one database, at
+  the same time, and keeping them apart is something we promise when we sell
+  it.&rdquo;</em>
+</p>
+
+<div class="box">
+  <p>
+    <strong>That is the whole business problem.</strong> They sell one piece of
+    software to several competing clients. If Kilele Rides could ever see Karoo
+    Coaches&rsquo; customer list, Velocity would lose both clients and probably
+    the company. Everything in this build is subordinate to that promise.
+  </p>
+</div>
+
+<h3>What the product does</h3>
+<p>
+  Three brands&rsquo; marketing teams log in and work with their own growth
+  data. Each brand has two people: an <strong>owner</strong> who can send
+  campaigns, and an <strong>analyst</strong> who can only look. Six logins.
+</p>
+
+<table>
+  <tr><th>Brand</th><th>Market</th><th>Customers</th><th>Campaigns</th><th>Engagement records</th></tr>
+  <tr><td>Kilele Rides</td><td>Kenya</td><td>81,842</td><td>44</td><td>301,209</td></tr>
+  <tr><td>Karoo Coaches</td><td>South Africa</td><td>12,406</td><td>19</td><td>69,100</td></tr>
+  <tr><td>Marrakech Express</td><td>Morocco</td><td>928</td><td>6</td><td>1,030</td></tr>
+</table>
+
+<p>
+  Kilele is <strong>88 times</strong> the size of Marrakech. That ratio is
+  deliberate on their part: it is how they find out whether you wrote something
+  that works on a demo dataset or something that works on a real one.
+</p>
+
+<h3>The five things the product must do</h3>
+<ol>
+  <li><strong>Load each brand&rsquo;s data</strong> from the supplied files.</li>
+  <li><strong>Show three views and a dashboard</strong> — customers, campaigns,
+      and totals: how many customers, how many are contactable, signups per day
+      over the last 30 days, and how each campaign performed.</li>
+  <li><strong>Send a campaign</strong> — the owner picks one, sees exactly who
+      it goes to and how many people that is, and confirms.</li>
+  <li><strong>Keep up with the provider</strong> — delivery reports, bounces,
+      opens and unsubscribes arrive over time and must keep the picture of who
+      is contactable correct.</li>
+  <li><strong>Publish results</strong> — turn one campaign&rsquo;s results into
+      a password-protected link for a client with no login.</li>
+</ol>
+
+<div class="warn box">
+  <p>
+    <strong>How they grade it.</strong> Their words: <em>&ldquo;UI and UX earn
+    brownie points and are welcome, but the main thing we&rsquo;re grading is
+    the data and the guarantees around it.&rdquo;</em> They also say they will
+    sign in as each user <em>directly against Supabase, not just through your
+    app</em> — so anything enforced only in the interface counts for nothing.
+  </p>
+</div>
+
+<!-- ===================================================================== -->
+<div class="page-break"></div>
+<h2>2 · The data you were given</h2>
+
+<p>
+  A zip of eleven CSV files, verified against the SHA-256 in the brief. They are
+  deliberately messy — this is a test of whether you notice.
+</p>
+
+<table>
+  <tr><th>File</th><th>Rows</th><th>Delimiter</th><th>Notes</th></tr>
+  <tr><td>kilele-contacts.csv</td><td>83,993</td><td>comma</td><td>byte order mark</td></tr>
+  <tr><td>kilele-contacts-delta-2026-09-01.csv</td><td>4,180</td><td>comma</td><td>corrections issued later</td></tr>
+  <tr><td>kilele-campaigns.csv</td><td>46</td><td>comma</td><td></td></tr>
+  <tr><td>kilele-events.csv</td><td>312,000</td><td>comma</td><td></td></tr>
+  <tr><td>karoo-contacts.csv</td><td>13,042</td><td>comma</td><td>Title Case headings</td></tr>
+  <tr><td>karoo-campaigns.csv</td><td>19</td><td>comma</td><td></td></tr>
+  <tr><td>karoo-events.csv</td><td>74,000</td><td>comma</td><td></td></tr>
+  <tr><td>marrakech-contacts.csv</td><td>957</td><td><strong>semicolon</strong></td><td>French column names</td></tr>
+  <tr><td>marrakech-campaigns.csv</td><td>6</td><td><strong>semicolon</strong></td><td>comma decimals</td></tr>
+  <tr><td>marrakech-events.csv</td><td>940</td><td><strong>semicolon</strong></td><td></td></tr>
+</table>
+
+<h3>What a &ldquo;contact&rdquo;, a &ldquo;campaign&rdquo; and an &ldquo;event&rdquo; are</h3>
+<ul>
+  <li><strong>Contact</strong> — one customer. Name, email, phone, country, city,
+      when they signed up, whether they consented to marketing, whether they
+      have unsubscribed or bounced.</li>
+  <li><strong>Campaign</strong> — one send that already happened. Its name,
+      channel, spend, and the provider&rsquo;s reported totals (sent, delivered,
+      bounced, opens, clicks).</li>
+  <li><strong>Event</strong> — one thing one customer did: opened, clicked,
+      bounced, complained, unsubscribed. This is the raw log the reported
+      totals are supposed to summarise.</li>
+</ul>
+
+<h3>Every trap in the data, and what was done about it</h3>
+
+<table>
+  <tr><th>What was wrong</th><th>Scale</th><th>Decision</th></tr>
+  <tr>
+    <td>Three different dialects: comma vs semicolon, a byte order mark, three spellings of every column (<code>external_id</code>, <code>External Id</code>, <code>e_mail</code>)</td>
+    <td>all files</td>
+    <td>Headings are snake-cased, then a four-entry alias table handles the French names</td>
+  </tr>
+  <tr>
+    <td>Quoted fields containing commas and newlines — some rows span two lines</td>
+    <td>~20 rows</td>
+    <td>A real CSV parser, never <code>split(',')</code></td>
+  </tr>
+  <tr>
+    <td><code>status</code> spelled eleven ways: <code>active</code>, <code>ACTIVE</code>, <code>Active</code>, <code>active&nbsp;</code>, <code>unsubscribe</code>&hellip;</td>
+    <td>~90k rows</td>
+    <td>Normalised to four canonical values</td>
+  </tr>
+  <tr>
+    <td><code>consent_marketing</code> in thirteen forms: <code>true</code>, <code>1</code>, <code>TRUE</code>, <code>yes</code>, <code>Y</code>, <code>f</code>&hellip;</td>
+    <td>~95k rows</td>
+    <td>Normalised to a boolean; <strong>blank becomes NO</strong></td>
+  </tr>
+  <tr>
+    <td><code>country</code> in 23 forms: <code>KE</code>, <code>KEN</code>, <code>kenya</code>, and <code>254</code> — the dialling code in the country column</td>
+    <td>~3k rows</td>
+    <td>Mapped to ISO-2; unrecognisable becomes empty, customer kept</td>
+  </tr>
+  <tr>
+    <td><strong>400 rows declaring the wrong brand</strong> — 312 rows in the Kilele file say KAROO, 88 in the Karoo file say KILELE</td>
+    <td>400 rows</td>
+    <td><strong>Refused in both brands.</strong> An export for one brand has no business creating rows in another</td>
+  </tr>
+  <tr>
+    <td>A campaign in the Karoo file naming <code>KIL-0007</code> — a Kilele campaign — as its parent</td>
+    <td>1 row</td>
+    <td>Reference kept verbatim, link left empty, reported. The database refuses it structurally anyway</td>
+  </tr>
+  <tr>
+    <td>A header line repeated in the middle of a file</td>
+    <td>1 row</td>
+    <td>Detected and refused</td>
+  </tr>
+  <tr>
+    <td>Three NUL bytes inside customer names</td>
+    <td>3 rows</td>
+    <td>Refused. PostgreSQL cannot store one, and editing somebody&rsquo;s name is not a fix</td>
+  </tr>
+  <tr>
+    <td>Duplicate customer references within one file</td>
+    <td>3,304</td>
+    <td>Last one wins; the 368 that differ are reported individually</td>
+  </tr>
+  <tr>
+    <td>88 customers with signup dates <strong>in the future</strong> (up to June 2027)</td>
+    <td>88 rows</td>
+    <td>Counted as customers, excluded from any time trend</td>
+  </tr>
+  <tr>
+    <td>Phone numbers twelve digits behind a single zero — <code>025710676604</code></td>
+    <td>21,974</td>
+    <td>Number dropped, customer kept. A wrong number is a message to a stranger</td>
+  </tr>
+  <tr>
+    <td>Invalid emails: <code>john doe@vg-eval.test</code>, <code>double@@…</code>, <code>no-tld@vg-eval</code></td>
+    <td>1,105</td>
+    <td>Address dropped, never repaired. Deleting the space is a guess about who that person is</td>
+  </tr>
+  <tr>
+    <td>633 Moroccan results naming campaigns that are not in the export</td>
+    <td>633</td>
+    <td><strong>Kept</strong>, with no campaign attached — unsubscribes are among them</td>
+  </tr>
+</table>
+
+<div class="box">
+  <p>
+    <strong>The principle behind every row above:</strong> bad input is refused
+    and reported, never stored in a half-corrected form. A refused row appears
+    at <code>/portal/imports</code> with its line number, the field, and the
+    offending value — so the marketer can fix the export without emailing you.
+  </p>
+</div>
+
+<!-- ===================================================================== -->
+<div class="page-break"></div>
+<h2>3 · What Supabase and Vercel are, and how they bind together</h2>
+
+<h3>Supabase, in one paragraph</h3>
+<p>
+  Supabase is a hosted <strong>PostgreSQL database</strong> with three things
+  bolted on that you would otherwise build yourself:
+</p>
+<ul>
+  <li><strong>Auth</strong> — user accounts, passwords, Google sign-in, and
+      session tokens (JWTs).</li>
+  <li><strong>An automatic REST API</strong> (a tool called PostgREST). Every
+      table becomes an HTTP endpoint without you writing a single route.</li>
+  <li><strong>Row Level Security</strong> — PostgreSQL rules that decide, per
+      row, who may see it. This is the important one.</li>
+</ul>
+
+<h3>Vercel, in one paragraph</h3>
+<p>
+  Vercel hosts the Next.js application. It gives a public URL, and — critically
+  — it runs <strong>server-side code</strong>. That matters because two secrets
+  must never reach a browser: the Supabase service-role key and the messaging
+  provider&rsquo;s API key. Vercel is where those live.
+</p>
+
+<h3>How they bind: environment variables, and one naming rule</h3>
+<pre><code>NEXT_PUBLIC_*     compiled into the JavaScript bundle    readable by anyone
+everything else   stays in the Node.js process on Vercel  never sent to a browser</code></pre>
+
+<p>Five variables are set in Vercel&rsquo;s dashboard:</p>
+<table>
+  <tr><th>Variable</th><th>What it is</th><th>Safe in a browser?</th></tr>
+  <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td>Which Supabase project</td><td>Yes</td></tr>
+  <tr><td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td><td>The publishable key</td><td>Yes — worthless on its own</td></tr>
+  <tr><td><code>SUPABASE_SERVICE_ROLE_KEY</code></td><td>Bypasses every security rule</td><td><strong>Never</strong></td></tr>
+  <tr><td><code>DISPATCHER_BASE_URL</code></td><td>The messaging provider</td><td>Yes</td></tr>
+  <tr><td><code>DISPATCHER_API_KEY</code></td><td>Sends real messages</td><td><strong>Never</strong></td></tr>
+</table>
+
+<div class="info box">
+  <p>
+    <strong>Why the publishable key being public is fine.</strong> It only
+    identifies the project. On its own it opens nothing: every table refuses the
+    anonymous role outright. Proof — with that key and no login, every table
+    answers <code>42501 permission denied</code>, while a table that does not
+    exist answers <code>404</code>. The difference proves the tables are there
+    and the key cannot touch them.
+  </p>
+</div>
+
+<h3>Three database clients, and which one you may use where</h3>
+<table>
+  <tr><th>Client</th><th>Key</th><th>Acts as</th><th>Security rules</th><th>Where</th></tr>
+  <tr><td><code>createBrowserSupabaseClient()</code></td><td>publishable</td><td>the signed-in user</td><td><strong>enforced</strong></td><td>anywhere</td></tr>
+  <tr><td><code>createServerSupabaseClient()</code></td><td>publishable</td><td>the signed-in user</td><td><strong>enforced</strong></td><td>server only</td></tr>
+  <tr><td><code>createAdminSupabaseClient()</code></td><td>service role</td><td>nobody — full access</td><td><strong>bypassed</strong></td><td>server only</td></tr>
+</table>
+
+<p>
+  The two server files begin with <code>import 'server-only'</code>. That
+  package has no browser build, so if a browser component ever imports them —
+  directly or through a chain of imports — <strong>the build fails</strong>
+  rather than shipping a secret to the public. It is one line, and it is why
+  the secrets stay secret.
+</p>
+
+<div class="danger box">
+  <p>
+    <strong>The admin client is a deliberate hole in the safety net.</strong> It
+    exists for the three jobs with no logged-in user: importing the files,
+    reading provider reports, and serving the public shared report. Every query
+    it makes filters by <code>brand_id</code> by hand, because the database will
+    not do it for you there.
+  </p>
+</div>
+
+<!-- ===================================================================== -->
+<div class="page-break"></div>
+<h2>4 · How a request actually travels</h2>
+
+<p>Follow one click — a marketer opening the customer list:</p>
+
+<pre><code>1. Browser  GET https://campaign-five-flax.vercel.app/portal/contacts
+              cookie: sb-...-auth-token  (HttpOnly — page JavaScript cannot read it)
+
+2. Vercel   proxy.ts runs first
+              - reads the cookie, asks Supabase Auth "is this token still valid?"
+              - refreshes it if it is close to expiring
+              - no session -> redirect to /login
+
+3. Vercel   the page renders ON THE SERVER
+              createServerSupabaseClient() attaches the user's token
+
+4. Supabase PostgREST receives:  GET /rest/v1/contacts?select=...
+              Authorization: Bearer &lt;the user's JWT&gt;
+
+5. Postgres RLS runs before any row is returned:
+              USING (brand_id IN (SELECT app.current_user_brand_ids()))
+
+              auth.uid() comes from the JWT -> brand_members -> their brand id
+
+6. Postgres returns ONLY that brand's rows. The other 13,334 do not exist
+              as far as this query is concerned.
+
+7. Vercel   renders HTML and streams it back.</code></pre>
+
+<div class="box">
+  <p>
+    <strong>Notice what the application never does: it never filters by brand.</strong>
+    The query says <em>&ldquo;give me the contacts&rdquo;</em>, not
+    <em>&ldquo;give me the contacts where brand = mine&rdquo;</em>. A filter in
+    application code is a filter somebody can forget on the next page they add.
+    The database cannot forget.
+  </p>
+</div>
+
+<h3>Where the isolation rule lives — memorise this</h3>
+<pre><code>supabase/migrations/20260913160000_brands_and_isolation.sql, line 104
+
+CREATE FUNCTION app.current_user_brand_ids() RETURNS SETOF uuid
+  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+AS $$
+  SELECT m.brand_id FROM public.brand_members m
+  WHERE m.user_id = (SELECT auth.uid());
+$$;</code></pre>
+
+<p>Every policy on every table is the same single line referring to it:</p>
+<pre><code>USING (brand_id IN (SELECT app.current_user_brand_ids()))</code></pre>
+
+<p>Three properties of that function, each of which you should be able to defend:</p>
+<table>
+  <tr><th>Property</th><th>Why</th></tr>
+  <tr>
+    <td><code>SECURITY DEFINER</code></td>
+    <td>It reads <code>brand_members</code>, which is itself protected by a policy that calls this function. Without it, PostgreSQL raises <em>&ldquo;infinite recursion detected in policy&rdquo;</em>.</td>
+  </tr>
+  <tr>
+    <td><code>SET search_path = ''</code></td>
+    <td>A security-definer function with a caller-controlled search path is a privilege-escalation hole — the caller could substitute their own <code>brand_members</code> table. The empty path forces every name to be fully qualified.</td>
+  </tr>
+  <tr>
+    <td>Returns a <em>set</em>, not a boolean taking the row</td>
+    <td>A function taking <code>brand_id</code> as an argument is re-evaluated <strong>once per row</strong>. This one is hoisted out and evaluated <strong>once per query</strong>. At 81,842 contacts that is the difference between usable and not.</td>
+  </tr>
+</table>
+
+<!-- ===================================================================== -->
+<div class="page-break"></div>
+<h2>5 · How the spreadsheets got into the database</h2>
+
+<p>One command: <code>npm run import:seed</code>. Here is what happens inside it.</p>
+
+<pre><code>CSV file
+   |
+   |  1. READ           strip byte order mark, sniff the delimiter,
+   |                    snake-case the headings, alias the French ones
+   v
+raw rows (with line numbers kept)
+   |
+   |  2. NORMALISE      status  -> one of four values
+   |                    consent -> boolean (blank = NO)
+   |                    country -> ISO-2, or empty
+   |                    phone   -> +254712345678, or dropped
+   |                    dates   -> three formats, one flagged as ambiguous
+   |                    money   -> 221,09 becomes 221.09
+   v
+   |  3. VALIDATE       wrong brand?      -> REFUSE, record why
+   |                    no status?        -> REFUSE, record why
+   |                    NUL byte?         -> REFUSE, record why
+   |                    no email AND no phone? -> REFUSE, record why
+   v
+   |  4. DEDUPE         same customer twice in one file -> last wins
+   v
+   |  5. UPSERT         INSERT ... ON CONFLICT (brand_id, external_id) DO UPDATE
+   |                    2,000 rows per statement, via unnest()
+   v
+Postgres          +  a row in import_runs (counts)
+                  +  a row in import_issues per problem (line, field, value)</code></pre>
+
+<h3>Why it connects directly to Postgres, not through the REST API</h3>
+<p>
+  This moves roughly 400,000 rows. Through the REST API, one request at a time,
+  that would take about an hour and could leave the database half-loaded if it
+  failed in the middle. A direct connection with batched statements does it in
+  about three minutes.
+</p>
+
+<h3>Why running it twice is safe — the property they will test</h3>
+<pre><code>INSERT INTO contacts (...) VALUES (...)
+ON CONFLICT (brand_id, external_id) DO UPDATE SET ...</code></pre>
+<p>
+  <code>(brand_id, external_id)</code> is unique. A second run <em>updates</em>
+  the same rows instead of inserting new ones. Proven: the whole import was run
+  twice and the second run reported <strong>created 0</strong> for every file
+  with row counts unchanged.
+</p>
+
+<div class="warn box">
+  <p>
+    <strong>Why uniqueness is per brand, not global.</strong> The three exports
+    number their customers from the same pool — <code>CT-000484</code> exists in
+    more than one brand and means a different person in each. A global unique
+    constraint would have silently merged two people into one.
+  </p>
+</div>
+
+<h3>The one default in the entire importer</h3>
+<p>
+  10,056 rows have a blank consent field. Blank becomes <strong>NO</strong>.
+  This is the only place a value is assumed rather than refused, and it is
+  deliberately the cautious direction: the absence of a recorded yes cannot
+  become permission to contact someone. Defaulting the other way would have
+  added ten thousand people to a send nobody agreed to.
+</p>
+
+<!-- ===================================================================== -->
+<div class="page-break"></div>
+<h2>6 · Every page, and what it is for</h2>
+
+<table>
+  <tr><th>Path</th><th>What it shows</th><th>Why it exists</th></tr>
+  <tr>
+    <td><code>/login</code></td>
+    <td>Email + password, and Continue with Google</td>
+    <td>The brief requires both methods to work</td>
+  </tr>
+  <tr>
+    <td><code>/no-access</code></td>
+    <td>&ldquo;This account has no brand&rdquo;</td>
+    <td>Google authenticates anyone. Authentication is not authorisation — this is where an outsider lands, seeing no brand names and no numbers</td>
+  </tr>
+  <tr>
+    <td><code>/portal</code></td>
+    <td>Total customers, contactable, signups per day, campaign performance</td>
+    <td>The four figures the brief names by name</td>
+  </tr>
+  <tr>
+    <td><code>/portal/contacts</code></td>
+    <td>Searchable, filterable customer list, 50 per page</td>
+    <td>Must stay fast at 81,842 rows — search is 276&nbsp;ms</td>
+  </tr>
+  <tr>
+    <td><code>/portal/campaigns</code></td>
+    <td>Every campaign, provider figures beside event-log figures</td>
+    <td>The two disagree; both are shown rather than one chosen</td>
+  </tr>
+  <tr>
+    <td><code>/portal/campaigns/[id]</code></td>
+    <td>One campaign in full, plus Send and Share panels</td>
+    <td>Where an owner acts</td>
+  </tr>
+  <tr>
+    <td><code>/portal/campaigns/[id]/send</code></td>
+    <td>Recipient count, the rule behind it, five real recipients, confirm</td>
+    <td>The count shown is the count approved</td>
+  </tr>
+  <tr>
+    <td><code>/portal/sends/[id]</code></td>
+    <td>Approved / accepted / refused, per-recipient status, timeline</td>
+    <td>&ldquo;Where your send&rsquo;s progress and results are recorded&rdquo; — asked for by name in the submission</td>
+  </tr>
+  <tr>
+    <td><code>/portal/imports</code></td>
+    <td>Each file, what loaded, what was refused and why</td>
+    <td>&ldquo;The marketer sees what didn&rsquo;t load, without emailing you&rdquo;</td>
+  </tr>
+  <tr>
+    <td><code>/r/[token]</code></td>
+    <td>One campaign&rsquo;s totals, behind a password</td>
+    <td>For a client with no login</td>
+  </tr>
+</table>
+
+<h3>The dashboard, in detail — and the idea that carries it</h3>
+<p>
+  Every number on every screen carries a visible chip saying where it came from.
+  Three sources, never blended:
+</p>
+<table>
+  <tr><th>Basis</th><th>Meaning</th></tr>
+  <tr><td><strong>Provider-reported</strong></td><td>What the messaging provider claimed, stored exactly and never recalculated</td></tr>
+  <tr><td><strong>Counted from the event log</strong></td><td>Counted from the raw engagement rows</td></tr>
+  <tr><td><strong>Derived by this portal</strong></td><td>Worked out from customer records, by a rule printed beside the number</td></tr>
+</table>
+
+<p>
+  The brief asks for this directly: <em>&ldquo;Where two careful people could
+  reasonably count something two ways, say on the screen which way you
+  counted.&rdquo;</em> The chip is on the page rather than in a tooltip, because
+  a basis that only appears on hover is one most people never see — and on a
+  phone there is no hover at all.
+</p>
+
+<h4>Contactable — the number worth understanding properly</h4>
+<table>
+  <tr><th></th><th>Kilele</th><th>Karoo</th><th>Marrakech</th></tr>
+  <tr><td>Total customers</td><td>81,842</td><td>12,406</td><td>928</td></tr>
+  <tr><td>− no consent</td><td>23,802</td><td>6,273</td><td>469</td></tr>
+  <tr><td>− unsubscribed (record)</td><td>4,236</td><td>483</td><td>0</td></tr>
+  <tr><td>− bounced (record)</td><td>2,148</td><td>202</td><td>0</td></tr>
+  <tr><td>− removed or suppressed</td><td>701</td><td>0</td><td>0</td></tr>
+  <tr><td>− opted out (event log)</td><td>14,150</td><td>4,880</td><td>149</td></tr>
+  <tr><td>− bounced (event log)</td><td>620</td><td>379</td><td>70</td></tr>
+  <tr><td><strong>= contactable</strong></td><td><strong>36,185</strong></td><td><strong>189</strong></td><td><strong>240</strong></td></tr>
+</table>
+
+<div class="warn box">
+  <p>
+    <strong>Karoo is the interesting one, and you should raise it yourself.</strong>
+    Its customer records claim 483 unsubscribes. The event log holds
+    <strong>4,880 more people</strong> who actually opted out without their
+    record ever being updated. The portal believes the log, because the log is
+    what happened — and says so on screen. This is also the number to name when
+    they ask which figure you trust least.
+  </p>
+</div>
+
+<!-- ===================================================================== -->
+<div class="page-break"></div>
+<h2>7 · Roles and permissions</h2>
+
+<p>
+  <strong>An analyst sees everything an owner sees.</strong> That is correct,
+  not an oversight: the brief says the analyst &ldquo;can only look&rdquo;, and
+  looking is the job. The roles differ only in <em>actions</em>.
+</p>
+
+<table>
+  <tr><th>Path</th><th>Signed out</th><th>Analyst</th><th>Owner</th></tr>
+  <tr><td><code>/login</code>, <code>/r/[token]</code></td><td>yes</td><td>yes</td><td>yes</td></tr>
+  <tr><td><code>/portal</code>, <code>/portal/contacts</code>, <code>/portal/campaigns</code>, <code>/portal/imports</code></td><td>redirected</td><td>identical</td><td>identical</td></tr>
+  <tr><td><code>/portal/campaigns/[id]</code></td><td>redirected</td><td>identical <strong>minus two buttons</strong></td><td>+ Send, + Share</td></tr>
+  <tr><td><code>/portal/campaigns/[id]/send</code></td><td>redirected</td><td><strong>refused</strong></td><td>yes</td></tr>
+  <tr><td><code>/portal/sends/[id]</code></td><td>redirected</td><td>yes — may also fetch reports</td><td>yes</td></tr>
+</table>
+
+<h3>Only two actions are owner-only</h3>
+<p>Sending a campaign, and publishing a shared link. Both are enforced in the database, not in the interface:</p>
+
+<pre><code>CREATE POLICY campaign_sends_owner_may_approve ON campaign_sends
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    brand_id IN (SELECT app.current_user_brand_ids())   -- your brand
+    AND app.is_brand_owner(brand_id)                    -- and you are its owner
+  );</code></pre>
+
+<p>Tested against the live deployment, signed in as the Karoo analyst, going straight at the database:</p>
+<table>
+  <tr><th>Attempt</th><th>Result</th></tr>
+  <tr><td><code>INSERT campaign_sends</code> (send a campaign)</td><td><strong>REFUSED — 42501</strong></td></tr>
+  <tr><td><code>INSERT shared_reports</code> (publish results)</td><td><strong>REFUSED — 42501</strong></td></tr>
+  <tr><td><code>UPDATE contacts</code></td><td><strong>REFUSED — 42501</strong></td></tr>
+  <tr><td><code>SELECT contacts</code></td><td>allowed — analysts read</td></tr>
+</table>
+
+<p>
+  <code>42501</code> is PostgreSQL&rsquo;s <em>insufficient privilege</em>. Those
+  attempts bypassed the application entirely — publishable key, analyst&rsquo;s
+  own session, straight to the database. That is exactly how it will be tested.
+</p>
+
+<div class="box">
+  <p>
+    <strong>Say this in the interview:</strong> &ldquo;Hiding the button is a
+    courtesy so nobody clicks something they cannot do. The guarantee is the
+    insert policy. Those are the only two tables a signed-in user may write to,
+    and neither grants update or delete — which is what keeps an approval
+    immutable.&rdquo;
+  </p>
+</div>
+
+<!-- ===================================================================== -->
+<div class="page-break"></div>
+<h2>8 · Sending a campaign, and hearing back</h2>
+
+<h3>The send, in order</h3>
+<pre><code>1. requireOwner()             the button being visible proves nothing
+2. re-count the audience      if it moved since the preview: STOP, show the new number
+3. INSERT campaign_sends      AS THE USER, so the database's owner check runs
+                              a unique index allows ONE live send per campaign
+4. freeze the audience        write every recipient into send_recipients
+5. hand it to the provider    Idempotency-Key = this send's own id</code></pre>
+
+<table>
+  <tr><th>Guarantee the brief asks for</th><th>What enforces it</th></tr>
+  <tr><td>The confirmation count is what is approved</td><td>Re-counted at confirm; if it moved, nothing is sent</td></tr>
+  <tr><td>No double-send</td><td>A partial unique index — <strong>not</strong> a disabled button</td></tr>
+  <tr><td>No silent half-send</td><td>Accepted and refused counted separately; any gap stated on screen</td></tr>
+  <tr><td>Past approvals still read as approved</td><td>Users may <code>INSERT</code> only — no <code>UPDATE</code>, no <code>DELETE</code></td></tr>
+</table>
+
+<div class="box">
+  <p>
+    <strong>Why a disabled button is not enough</strong> — they say they will
+    press confirm &ldquo;from two sessions at once&rdquo;. A disabled button
+    defends one browser tab against itself. Two sessions each have their own
+    button. The unique index is in the one place both requests must pass
+    through. The test fires two approvals concurrently: one wins, one is
+    refused.
+  </p>
+</div>
+
+<h3>The provider talks back</h3>
+<p>
+  There is no webhook. The provider offers
+  <code>GET /v1/messages/{batch}/events?since=</code>, so the app polls it —
+  reports pile up while nothing is watching and are collected when it next
+  looks.
+</p>
+
+<div class="danger box">
+  <p>
+    <strong>The provider&rsquo;s documentation is wrong, and you should say so.</strong>
+    It claims: <em>&ldquo;every event is delivered exactly once and in
+    order.&rdquo;</em> Neither half is true, and both were measured:
+  </p>
+  <ul>
+    <li>Polling one batch three times returned <strong>the same event ids all three times</strong>.</li>
+    <li>Timestamps within a page are not ordered — a real page reads 11:55:45, 11:56:40, 11:55:46.</li>
+  </ul>
+  <p>
+    The brief warned the reports would be &ldquo;deliberately messy and out of
+    order&rdquo;. Where documentation and observed behaviour disagree, this
+    build follows what it observed.
+  </p>
+</div>
+
+<table>
+  <tr><th>Property</th><th>Mechanism</th></tr>
+  <tr><td><strong>Idempotent</strong></td><td>Reports stored against the provider&rsquo;s own <code>event_id</code>, under the same unique constraint that made re-importing a file a no-op</td></tr>
+  <tr><td><strong>Order-independent</strong></td><td>An opt-out keeps its <em>earliest</em> timestamp, so a late report cannot undo one already recorded</td></tr>
+  <tr><td><strong>Ranked, not overwritten</strong></td><td><code>bounced</code> beats <code>delivered</code>, so a stale delivery report cannot resurrect a dead address</td></tr>
+</table>
+
+<p>Proven on the real send, twice in a row:</p>
+<table>
+  <tr><th></th><th>First sync</th><th>Second sync</th></tr>
+  <tr><td>Events read</td><td>320</td><td>20</td></tr>
+  <tr><td>New engagement rows</td><td>90</td><td><strong>0</strong></td></tr>
+  <tr><td>Recipients updated</td><td>240</td><td><strong>0</strong></td></tr>
+</table>
+
+<h3>The forged event — your best story</h3>
+<p>The first sync reported one unmatched row. Chasing it found this in the stream:</p>
+<pre><code>{"event_id": "evt-batch_50-forged",
+ "recipient_id": "CT-033857",
+ "brand_code": "KAROO",
+ "type": "delivered"}</code></pre>
+
+<p>
+  It claims to be <strong>Karoo</strong>. It names a customer who belongs to
+  <strong>Kilele</strong>. It arrived inside a <strong>Marrakech</strong>
+  send&rsquo;s report stream. Three brands in one event and none of them agree.
+  Its own id says <code>forged</code>.
+</p>
+
+<p>It was discarded and nothing was written, because of two decisions taken before it was ever seen:</p>
+<ol>
+  <li>The provider&rsquo;s <code>brand_code</code> is <strong>never read</strong>. It returns <code>"account"</code> regardless of what was sent.</li>
+  <li><code>recipient_id</code> is resolved only against customers of <strong>the brand whose send is being synced</strong>, never globally.</li>
+</ol>
+
+<p>Either shortcut would have written another tenant&rsquo;s row. It is now a test.</p>
+
+<!-- ===================================================================== -->
+<div class="page-break"></div>
+<h2>9 · The guarantees, and how to defend them</h2>
+
+<h3>The isolation test, and why a passing test proves nothing</h3>
+<p>
+  A test suite that returns empty for every query also passes. So the guarantee
+  was deliberately broken: the <code>contacts</code> policy was replaced with
+  <code>USING (true)</code> and the suite re-run.
+</p>
+<pre><code>x cannot read another brand contact, even asked for by id
+x does not see another brand contact in an unfiltered listing
+x is symmetric — the other brand cannot see the first either
+x cannot count another brand rows
+x a signed-in user belonging to no brand sees no contacts
+/ sees their own contact                         &lt;-- stayed GREEN
+  Tests  5 failed | 10 passed</code></pre>
+
+<p>
+  The green line is the one that matters: <em>sees their own contact</em> still
+  passed, so the suite distinguishes <strong>isolated</strong> from merely
+  <strong>empty</strong>. The policy was then restored and every predicate
+  re-read from <code>pg_policy</code> to confirm it matched the migration
+  exactly.
+</p>
+
+<h3>Isolation on tables that did not exist yet</h3>
+<p>
+  The brief says isolation must hold &ldquo;on every route into the data,
+  including the ones added after you&rsquo;ve moved on&rdquo;. Two mechanisms,
+  neither relying on memory:
+</p>
+<ol>
+  <li>Default privileges in <code>public</code> are <strong>revoked</strong> from the API roles, so a table added later is unreachable until granted deliberately — the mistake fails closed instead of open.</li>
+  <li><code>security_coverage()</code> reports the posture of <em>every</em> table, and the test asserts against that live list rather than a hand-written one.</li>
+</ol>
+<p>
+  It worked twice without being edited: adding <code>campaign_sends</code> in
+  phase 5 and <code>shared_reports</code> in phase 7 both turned the suite red
+  immediately.
+</p>
+
+<h3>Performance — requirement 5, measured not asserted</h3>
+<table>
+  <tr><th>Query</th><th>First attempt</th><th>Now</th></tr>
+  <tr><td>Contactability (95k customers × 371k events)</td><td>4,274 ms</td><td><strong>299 ms</strong></td></tr>
+  <tr><td>Campaign performance (69 campaigns)</td><td>3,384 ms</td><td><strong>82 ms</strong></td></tr>
+  <tr><td>Search across 81,842 customers</td><td>—</td><td>276 ms</td></tr>
+</table>
+
+<p>Neither fix was caching:</p>
+<ul>
+  <li><strong>Contactability</strong> — &ldquo;has this person opted out?&rdquo; is a <em>fact</em>, not a question to re-ask on every page load. It became two columns on <code>contacts</code>, maintained by a trigger as events arrive.</li>
+  <li><strong>Campaign performance</strong> — the list stopped counting <em>distinct people</em> across every campaign at once. A list does not need that; only the detail page does.</li>
+</ul>
+
+<h3>The shared link — two different problems</h3>
+<table>
+  <tr><th>Requirement</th><th>Answer</th></tr>
+  <tr>
+    <td>Nothing reachable by <strong>guessing the address</strong></td>
+    <td>256-bit token from a cryptographic source (not a UUID, which carries 122 bits and a recognisable shape). An unknown token, a withdrawn one, and a wrong password all answer identically</td>
+  </tr>
+  <tr>
+    <td>Nothing reachable by <strong>getting past the password</strong></td>
+    <td>There is nothing else behind it. One token resolves to one report to one campaign, and the page takes no identifier a reader could alter</td>
+  </tr>
+</table>
+<p>
+  The password is bcrypt at work factor 12, hashed and compared <em>inside the
+  database</em>. The function the public page calls returns only
+  <code>ok</code> / <code>denied</code> / <code>locked</code> — never the report
+  — so although anyone may call it, it cannot be used as a data endpoint. Five
+  wrong answers lock it for fifteen minutes.
+</p>
+
+<!-- ===================================================================== -->
+<div class="page-break"></div>
+<h2>10 · How it was built, from nothing</h2>
+
+<p>Nine phases, each a real commit. This order is defensible and worth explaining: the guarantees came first, the interface last.</p>
+
+<table>
+  <tr><th>Phase</th><th>What</th><th>Why then</th></tr>
+  <tr><td>0</td><td>Next.js + Supabase project, environment split, three clients</td><td>Establish the security model before there is anything to secure</td></tr>
+  <tr><td>1</td><td>Schema, Row Level Security, the isolation test</td><td>The guarantee is the product. Everything else sits on it</td></tr>
+  <tr><td>2</td><td>Six logins, Google, roles</td><td>Nothing can be tested per-user until users exist</td></tr>
+  <tr><td>3</td><td>The importer and its failure report</td><td>No data, no dashboard</td></tr>
+  <tr><td>4</td><td>Dashboard, customers, campaigns</td><td>Reading before writing</td></tr>
+  <tr><td>5</td><td>Sending</td><td>The first thing that costs money</td></tr>
+  <tr><td>6</td><td>Provider reports</td><td>Needs a real send to report on</td></tr>
+  <tr><td>7</td><td>The shared link</td><td>Needs results worth sharing</td></tr>
+  <tr><td>8</td><td>Design, sidebar, palette, deployment</td><td>Last, because it is the least load-bearing</td></tr>
+</table>
+
+<h3>If you rebuilt it tomorrow, the order would be</h3>
+<ol>
+  <li><code>npx create-next-app</code>, then a Supabase project.</li>
+  <li>Split environment variables into public and server-only; add <code>server-only</code> to anything holding a secret.</li>
+  <li><strong>Write the schema and the RLS policies before any page.</strong> One predicate function, one policy line per table.</li>
+  <li><strong>Write the isolation test, then break the policy on purpose to watch it fail.</strong></li>
+  <li>Create users; map each to a brand and role.</li>
+  <li><strong>Count the data before parsing it.</strong> Every assumption about the files was wrong in some way.</li>
+  <li>Import: normalise, refuse, report, upsert.</li>
+  <li>Read UI, with every number labelled by its source.</li>
+  <li>Write paths, owner-gated in the database.</li>
+  <li>Design, then deploy.</li>
+</ol>
+
+<div class="box">
+  <p>
+    <strong>The one habit that produced most of the good decisions:</strong>
+    measure before deciding. The enum vocabularies, the contrast ratios, the
+    query timings, the provider&rsquo;s actual behaviour, the forged event —
+    every one of those came from running something, not from reasoning about it.
+  </p>
+</div>
+
+<!-- ===================================================================== -->
+<div class="page-break"></div>
+<h2>11 · Questions you will be asked, with answers</h2>
+
+<p class="q">Where does the data isolation live?</p>
+<p>
+  <code>supabase/migrations/20260913160000_brands_and_isolation.sql:104</code> —
+  the function <code>app.current_user_brand_ids()</code>. Every policy in the
+  project is the same one line referring to it. Ten tables, ten identical
+  policies. There is no second place to look.
+</p>
+
+<p class="q">What if I sign in as the Karoo analyst and query Kilele directly, bypassing your app?</p>
+<p>
+  You get nothing. The app is not in the loop — Row Level Security runs inside
+  PostgreSQL, so <code>curl</code>, psql and the Supabase dashboard are all
+  subject to it. Try it; that is the test I would run first too.
+</p>
+
+<p class="q">How do I know your test actually tests anything?</p>
+<p>
+  Because I broke it on purpose. I replaced the contacts policy with
+  <code>USING (true)</code> and five assertions failed while &ldquo;sees their
+  own contact&rdquo; stayed green — which is what distinguishes isolated from
+  empty.
+</p>
+
+<p class="q">Why is the analyst seeing the same pages as the owner?</p>
+<p>
+  Because an analyst&rsquo;s job is to look. The brief says they &ldquo;can only
+  look&rdquo;, not that they see less. The difference is two actions — sending
+  and publishing — and both are refused by the database, not by the interface.
+</p>
+
+<p class="q">Your dashboard shows two different numbers for opens. Which is right?</p>
+<p>
+  Neither, and that is the point. The provider reports what it observed across
+  the whole send; the event log is the engagement we hold rows for. For
+  KAR-0001 that is 2,732 against 704. Averaging them or picking one would
+  produce a number nobody can defend, so both are shown and labelled.
+</p>
+
+<p class="q">Which number are you least sure about?</p>
+<p>
+  Karoo&rsquo;s 189 contactable. It is correct under the stated rule, but
+  Karoo&rsquo;s records claim 483 unsubscribes while the log holds 4,880 more
+  people who opted out. One of those sources is badly stale. I would want to
+  know which before anyone sent to that list.
+</p>
+
+<p class="q">What stops a double-send?</p>
+<p>
+  A partial unique index allowing one live send per campaign. Not a disabled
+  button — that defends one browser tab against itself. Two sessions confirming
+  at the same instant both reach the database and exactly one wins.
+</p>
+
+<p class="q">What happens if your send crashes half way?</p>
+<p>
+  The approval and the frozen audience are already written, so the record of
+  what was approved survives and the send is resumable. Retrying uses the same
+  idempotency key, so the provider re-attaches to the original batch rather
+  than sending to everyone twice.
+</p>
+
+<p class="q">The provider says its reports arrive exactly once and in order. Why did you not trust that?</p>
+<p>
+  Because I checked. Polling one batch three times returned the same event ids
+  three times, and timestamps within a page are not ordered. The brief also
+  warned the reports would be messy. Where documentation and behaviour
+  disagree, behaviour wins.
+</p>
+
+<p class="q">What was the hardest bug?</p>
+<p>
+  A phone-number length check that accepted 8 to 15 digits turned
+  <code>025701347763</code> into a confident <code>+25425701347763</code> —
+  nobody&rsquo;s number. I replaced it with a per-market numbering plan, which
+  then rejected 6,493 Karoo customers holding valid Kenyan +254 numbers. A
+  number that states its own country code is unambiguous wherever it appears.
+</p>
+
+<p class="q">What is not finished?</p>
+<p>
+  Bilingual Arabic was dropped deliberately — not in the brief, and a
+  half-translated interface is worse than none. Delivery reports are polled on
+  demand rather than on a schedule. And campaign pages return the not-found UI
+  under HTTP 200, which is documented Next.js behaviour for streamed responses,
+  mitigated by a <code>noindex</code> tag the framework injects itself.
+</p>
+
+<!-- ===================================================================== -->
+<div class="page-break"></div>
+<h2>12 · Final submission checklist</h2>
+
+<p>Everything the brief asks to be emailed, and where it is.</p>
+
+<table>
+  <tr><th></th><th>Item</th><th>Answer</th></tr>
+  <tr><td><span class="tag">done</span></td><td>Live URL</td><td>campaign-five-flax.vercel.app</td></tr>
+  <tr><td><span class="tag">done</span></td><td>Six logins with passwords</td><td>Table in README, and below</td></tr>
+  <tr><td><span class="tag part">check</span></td><td>Google sign-in is live</td><td>Working — confirm once more after the Supabase URL settings are saved</td></tr>
+  <tr><td><span class="tag">done</span></td><td>Supabase project URL + anon key</td><td>In the note</td></tr>
+  <tr><td><span class="tag">done</span></td><td>Table and function names</td><td>10 tables, 15 functions — listed in the note</td></tr>
+  <tr><td><span class="tag">done</span></td><td>Which key the deployed app uses</td><td>The publishable key everywhere user-facing</td></tr>
+  <tr><td><span class="tag">done</span></td><td>Public repo with real history</td><td>14 commits, one per phase</td></tr>
+  <tr><td><span class="tag">done</span></td><td><code>schema.sql</code></td><td>Repo root, generated from 11 migrations</td></tr>
+  <tr><td><span class="tag">done</span></td><td>README</td><td>Repo root</td></tr>
+  <tr><td><span class="tag">done</span></td><td>AI tools used</td><td><code>docs/AI-USAGE.md</code> — phase by phase</td></tr>
+  <tr><td><span class="tag">done</span></td><td>Where send progress is recorded</td><td><code>/portal/sends/{id}</code>, <code>campaign_sends</code>, <code>send_recipients</code></td></tr>
+  <tr><td><span class="tag">done</span></td><td>Provider key</td><td>The key from the brief email</td></tr>
+  <tr><td><span class="tag no">to do</span></td><td>Shared link + its password</td><td><strong>Create one from any campaign page</strong> — the password shows once</td></tr>
+  <tr><td><span class="tag">done</span></td><td>300-word note</td><td>Drafted at 287 words in <code>docs/SUBMISSION-NOTE.md</code></td></tr>
+  <tr><td><span class="tag no">to do</span></td><td>How long it took</td><td><strong>Only you know</strong></td></tr>
+  <tr><td><span class="tag no">to do</span></td><td>Earliest start date + notice period</td><td><strong>Only you know</strong></td></tr>
+</table>
+
+<h3>The eleven &ldquo;done&rdquo; criteria</h3>
+<table>
+  <tr><th></th><th>Criterion</th></tr>
+  <tr><td><span class="tag">yes</span></td><td>1 · Three brands live, six logins, each landing in its own portal, whichever way they sign in</td></tr>
+  <tr><td><span class="tag">yes</span></td><td>2 · A brand sees its own data and nothing from another — on every route, including ones added later</td></tr>
+  <tr><td><span class="tag">yes</span></td><td>3 · Data loads; the marketer sees what didn&rsquo;t and why; loading twice leaves one set</td></tr>
+  <tr><td><span class="tag">yes</span></td><td>4 · The numbers are right, and the screen says which way they were counted</td></tr>
+  <tr><td><span class="tag">yes</span></td><td>5 · As usable for the 90× brand as the small one</td></tr>
+  <tr><td><span class="tag">yes</span></td><td>6 · Sending is safe and honest — no double-send, no silent half-send</td></tr>
+  <tr><td><span class="tag">yes</span></td><td>7 · The provider talks back over time, out of order, and contactability stays correct</td></tr>
+  <tr><td><span class="tag">yes</span></td><td>8 · A test that fails if brand isolation is removed</td></tr>
+  <tr><td><span class="tag">yes</span></td><td>9 · The shared link is safe to send to a stranger</td></tr>
+  <tr><td><span class="tag">yes</span></td><td>10 · Bad input rejected not stored; loading, empty and broken screens say so; AI tools named</td></tr>
+  <tr><td><span class="tag">yes</span></td><td>11 · A real web app — phone and laptop, client-ready</td></tr>
+</table>
+
+<h3>The six logins</h3>
+<table>
+  <tr><th>Email</th><th>Password</th><th>Brand</th><th>Role</th></tr>
+  <tr><td>owner@kilele.vg-eval.test</td><td>Kilele-Owner-2026</td><td>Kilele Rides</td><td>owner</td></tr>
+  <tr><td>analyst@kilele.vg-eval.test</td><td>Kilele-Analyst-2026</td><td>Kilele Rides</td><td>analyst</td></tr>
+  <tr><td>owner@karoo.vg-eval.test</td><td>Karoo-Owner-2026</td><td>Karoo Coaches</td><td>owner</td></tr>
+  <tr><td>analyst@karoo.vg-eval.test</td><td>Karoo-Analyst-2026</td><td>Karoo Coaches</td><td>analyst</td></tr>
+  <tr><td>owner@marrakech.vg-eval.test</td><td>Marrakech-Owner-2026</td><td>Marrakech Express</td><td>owner</td></tr>
+  <tr><td>analyst@marrakech.vg-eval.test</td><td>Marrakech-Analyst-2026</td><td>Marrakech Express</td><td>analyst</td></tr>
+</table>
+
+<h3>Before you press send</h3>
+<ol>
+  <li>Save the Supabase <strong>Site URL</strong> and <strong>Redirect URLs</strong>, then try Google once — it should land on <code>/no-access</code>.</li>
+  <li>Publish a shared report and note the link and password.</li>
+  <li>Consider rotating the service-role and dispatcher keys.</li>
+  <li>Fill in the three bracketed facts in <code>docs/SUBMISSION-NOTE.md</code>.</li>
+</ol>
+
+<div class="box">
+  <p>
+    <strong>One last thing worth saying in the interview.</strong> When they ask
+    what you would do next: the delivery-report sync runs on demand rather than
+    on a schedule. In production that would be a cron job hitting the same
+    function. It is a deliberate scope decision, not something forgotten — and
+    knowing the difference is most of what they are hiring for.
+  </p>
+</div>
+
+</body>
+</html>
