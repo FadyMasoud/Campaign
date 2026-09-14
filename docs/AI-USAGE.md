@@ -281,3 +281,69 @@ in JavaScript *is* the NUL character, so it replaced NUL with NUL and did
 nothing. It now joins with a readable `<NUL>` marker, and the database writer
 strips NUL from quoted values as well, because the value echoed back into an
 error report is arbitrary input from a file nobody controls.
+
+---
+
+## Phase 4 — the read UI and the metric definitions
+
+| File | Origin | Author's involvement |
+| --- | --- | --- |
+| `supabase/migrations/…_analytics.sql` | AI-generated | The SECURITY INVOKER choice was checked against the definer used in phase 1 |
+| `supabase/migrations/…_contactability_state.sql` | AI-generated | Author required the trigger be statement-level, not row-level, before it was written |
+| `supabase/migrations/…_campaign_performance_split.sql` | AI-generated | Splitting list from detail was the author's call after seeing the timings |
+| `supabase/migrations/…_contact_search.sql` | AI-generated | pg_trgm chosen over prefix-only search deliberately |
+| `src/lib/analytics/queries.ts` | AI-generated | The three-basis model is the author's design |
+| `src/app/portal/*` | AI-generated | Copy reviewed line by line; the basis chip was required to be visible, not a tooltip |
+| `tests/analytics.test.ts`, `tests/contactability.test.ts` | AI-generated | The five areas of coverage were specified by the author |
+
+### The brief was re-read before building, not after
+
+Both PDFs were extracted and reconciled against the tracking document before
+any code was written, which caught three things:
+
+1. The brief names **three views explicitly** — a contacts view, a campaigns
+   view and a dashboard. The tracking document had recorded phase 4 only as
+   "numbers are right" and would have under-built it.
+2. The author's own build guide requires **light/dark mode and bilingual
+   EN/AR with RTL**. The tracking document had them recorded as out of scope,
+   which was true of the official brief and false of the guide.
+3. Two data traps that survived phase 3: **88 Kilele contacts with signup
+   dates up to June 2027**, and **no signups at all in the real last 30 days**
+   for Karoo and Marrakech, whose exports stop in April 2026.
+
+### Where the AI was overruled
+
+- It proposed sliding the signups window back to "the last 30 days that
+  contain data", so every brand would show a populated chart. Refused: that
+  quietly redefines the phrase the brief uses. The window is the real last 30
+  days, and the empty case says so in words, naming the most recent signup.
+- It proposed a single contactable figure from stored status alone. Refused:
+  Karoo's records claim 483 unsubscribes while the log holds 4,880 more
+  people who opted out. The log is what happened.
+- It proposed reconciling the provider's figures with the event log into one
+  "best" number per campaign. Refused outright — that is precisely the
+  quietly-wrong number the brief warns about. Both are shown, labelled.
+- It proposed caching the slow dashboard query. Refused in favour of fixing
+  the shape: the question "has this person opted out?" is a fact, not a
+  query, so it became two columns maintained by a trigger.
+
+### Measured, not assumed
+
+The first contactability query was correct and took **4.3 seconds** — it
+joined 95,176 contacts against 371,249 events on every page load. The second
+attempt at campaign performance took **3.4 seconds** because it counted
+distinct contacts across every campaign at once. Both were found by timing
+them, not by reading them, and both fixes were structural:
+
+| Query | Before | After |
+| --- | --- | --- |
+| Contactability | 4,274 ms | 299 ms |
+| Campaign performance | 3,384 ms | 82 ms |
+
+### A limitation found and reported rather than papered over
+
+`notFound()` inside a matched dynamic route returns HTTP 200, because the
+portal layout has already started streaming. The page content is correct and
+leaks nothing — verified by checking the response for another brand's
+identifiers and finding none — but the status is wrong. It is recorded as a
+known issue rather than quietly left for a grader to find.

@@ -11,10 +11,10 @@ work only with their own growth data:
 
 Each brand has an **owner** (can send campaigns) and an **analyst** (read-only).
 
-> **Status:** Phase 3 — the data is loaded. Six accounts sign in (email or
-> Google) and land in their own brand's portal, which now holds 95,176
-> customers, 69 campaigns and 371,249 recorded results across the three brands.
-> Campaign analytics are phase 4.
+> **Status:** Phase 4 — the read UI. Six accounts sign in (email or Google) and
+> land in their own brand's dashboard, customers list and campaigns view, over
+> 95,176 customers, 69 campaigns and 371,249 recorded results. Sending is
+> phase 5.
 
 | Brand | Customers | Campaigns | Results |
 | --- | --- | --- | --- |
@@ -324,3 +324,78 @@ assertions failed and `sees their own contact` did not — so it distinguishes
   not a parallel stylesheet.
 - This project targets **Next.js 16**, in which `middleware.ts` is renamed to
   `proxy.ts`. Session refresh uses the new convention.
+
+---
+
+## The screens, and where every number comes from
+
+| Route | What it shows |
+| --- | --- |
+| `/portal` | Total customers, contactable, signups per day, campaign performance |
+| `/portal/contacts` | Customers — searchable, filterable, 50 per page |
+| `/portal/campaigns` | Every campaign, both bases side by side |
+| `/portal/campaigns/[id]` | One campaign, including distinct-people counts |
+| `/portal/imports` | What loaded and what did not |
+
+**A quietly wrong number is worse than no number**, so every figure carries a
+visible chip naming its basis, and the three are never blended:
+
+| Basis | Source |
+| --- | --- |
+| **Provider-reported** | `campaigns.reported_*`, exactly as the export stated it — never recalculated |
+| **Counted from the event log** | one row per open, click, bounce, complaint or unsubscribe |
+| **Derived by this portal** | computed from customer records by a rule printed beside the number |
+
+The chip is a label on the page rather than a tooltip, because a basis that
+only appears on hover is one most readers never see — and on a phone there is
+no hover at all.
+
+### The numbers two people would count differently
+
+**Provider against event log.** Campaign `KAR-0001` is reported by the provider
+as 2,732 opens; the log holds 704, from 687 distinct people. `KIL-0016` reports
+12,679 opens against 10,640 sent — which is correct, because one recipient
+opening twice is two opens. Five campaigns, including `CMP-014`, have **no
+event log at all** while the provider claims thousands of sends; those are
+labelled "no event log" rather than shown as zeros, because zero and "we do not
+know" are different answers.
+
+**Contactable.** Counted the cautious way, as a waterfall where every customer
+falls into exactly one bucket:
+
+| | Kilele | Karoo | Marrakech |
+| --- | --- | --- | --- |
+| Total | 81,842 | 12,406 | 928 |
+| − no consent | 23,802 | 6,273 | 469 |
+| − unsubscribed / bounced (record) | 6,384 | 685 | 0 |
+| − opted out or bounced (event log) | 14,770 | 5,259 | 219 |
+| − removed or suppressed | 701 | 0 | 0 |
+| **= contactable** | **36,185** | **189** | **240** |
+
+Karoo is why this is shown in full: its customer records claim 483
+unsubscribes, while the event log holds **4,880 more people** who opted out
+without their record ever being updated. The portal believes the log, and says
+so on the screen.
+
+**Signups per day** are bucketed by the brand's *own* timezone, not UTC — a
+Kilele signup at 23:30 UTC belongs to the next morning in Nairobi. The window
+is the real last 30 days: for Karoo and Marrakech that is empty, because their
+exports stop in April 2026, and the screen says exactly that rather than
+sliding the window back to wherever the data happens to be.
+
+### Staying quick for the brand with ninety times the data
+
+Requirement 5 is measured, not asserted:
+
+| Query | First attempt | Now |
+| --- | --- | --- |
+| Contactability | 4,274 ms | **299 ms** |
+| Campaign performance | 3,384 ms | **82 ms** |
+| Search across 81,842 customers | — | 276 ms |
+
+Neither fix was caching. "Has this person opted out?" is a fact, not a
+question to re-ask on every page load, so it became two columns on `contacts`
+maintained by a statement-level trigger as events arrive — order-independently,
+so a late report cannot undo an earlier opt-out, which is also what the send
+phase needs. And the campaign list stopped counting distinct people across
+every campaign at once, because only the detail page shows that.

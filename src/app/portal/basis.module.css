@@ -1,0 +1,43 @@
+/* Basis chips. Colour alone never carries the meaning — each chip also spells
+   out its basis in words, because "the blue one is provider data" is not
+   something a reader should have to learn. */
+
+.provider,
+.log,
+.derived {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  text-decoration: none;
+  border-block-end: 1px dotted currentColor;
+  cursor: help;
+}
+
+.provider {
+  color: var(--color-accent);
+  background-color: var(--color-accent-soft);
+}
+
+.log {
+  color: var(--color-success);
+  background-color: var(--color-success-soft);
+}
+
+.derived {
+  color: var(--color-text-muted);
+  background-color: var(--color-surface-sunken);
+}
+
+.rule {
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+  max-inline-size: var(--width-prose);
+  text-wrap: pretty;
+  margin-block-start: var(--space-2);
+}

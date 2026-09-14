@@ -14,8 +14,8 @@ Status: ☐ not started · ◐ in progress · ☑ done
 | 1 | Three brands live. Six logins, each landing in its own portal, at an openable URL, **whichever way they sign in**. Owners send, analysts can't, outsiders get in nowhere. | 2 | ◐ |
 | 2 | A brand sees its own data and nothing from another brand — on every route, **including ones added later**. | 1 | ☑ |
 | 3 | Data loads; the marketer sees what didn't and why. Loading the same export twice leaves **one** set of customers. | 3 | ☑ |
-| 4 | Numbers are right. Where two careful people could count differently, **say on screen which way you counted**. | 4 | ☐ |
-| 5 | As usable for the 90× brand as the small one. | 4 | ☐ |
+| 4 | Numbers are right. Where two careful people could count differently, **say on screen which way you counted**. | 4 | ☑ |
+| 5 | As usable for the 90× brand as the small one. | 4 | ☑ |
 | 6 | Sending is safe and honest. Confirmation count = what is approved. No double-send, no silent half-send. Past approvals still read as approved. | 5 | ☐ |
 | 7 | Provider talks back over time, out of order, while the app isn't looking. "Who's contactable" stays correct. | 6 | ☐ |
 | 8 | **At least one test that fails if brand isolation is removed.** | 1 | ☑ |
@@ -71,10 +71,16 @@ Design against these specifically — they are stated, not guessed.
 
 ## Scope notes
 
-- **"Build only what's asked."** Bilingual EN/AR with RTL, and light/dark theming,
-  are *not* in the brief. They are the author's additions. They may earn the
-  "brownie points" the brief offers for UI/UX, but they are not graded criteria
-  and must not come out of the budget for data correctness.
+- **"Build only what's asked."** Bilingual EN/AR with RTL, and light/dark
+  theming, are *not* in the official case-study brief — but they **are**
+  required by the author's own build guide, which lists them under phase 8.
+  This note previously recorded them as out of scope, which was right about
+  the brief and wrong about the guide. They stay in phase 8, after the data
+  guarantees, and must not come out of the budget for data correctness.
+- The brief names three views explicitly — **"a contacts view, a campaigns
+  view, and a dashboard"** — and four dashboard figures: total customers, how
+  many are contactable, signups per day over the last 30 days, and how each
+  campaign performed. All four are phase 4.
 - **"UI and UX earn brownie points… the main thing we're grading is the data and
   the guarantees around it."** Priority order is phases 1, 3, 5, 6, 7 first.
 - **"About a day of real, focused work."**
@@ -301,3 +307,89 @@ resolved link empty, and reports it. Asserted in `tests/import.test.ts`.
 2. That same plan then rejected 6,493 Karoo contacts holding valid Kenyan
    `+254` numbers, because it insisted a number match the brand's own country.
    A number that states its country code is unambiguous wherever it turns up.
+
+### Phase 4 — the read UI, and where every number comes from
+
+**Three views, as the brief names them,** plus the dashboard:
+
+| Route | What it is |
+| --- | --- |
+| `/portal` | Dashboard: total customers, contactable, signups per day, campaign performance |
+| `/portal/contacts` | Customers — searchable, filterable, paginated 50 at a time |
+| `/portal/campaigns` | Campaigns, both bases side by side |
+| `/portal/campaigns/[id]` | One campaign, including distinct-people counts and the disagreement |
+| `/portal/imports` | What loaded and what did not (phase 3) |
+
+**Every figure carries one of three bases, and they are never blended:**
+
+| Basis | Source | Shown as |
+| --- | --- | --- |
+| Provider-reported | `campaigns.reported_*`, verbatim from the export | blue chip |
+| Event log | counted from `contact_events` | green chip |
+| Derived | computed from customer records by a stated rule | grey chip |
+
+The chip is a visible label, not a tooltip: a number whose basis only appears
+on hover is a number most people read without its basis, and on a phone there
+is no hover at all.
+
+**Metric definitions**
+
+| Metric | Basis | Calculation |
+| --- | --- | --- |
+| Total customers | derived | every customer record, removed ones included and stated separately |
+| Contactable | derived | the waterfall below |
+| Signups per day | derived | `signup_at` bucketed by **brand-local** date, zero-filled, future dates excluded |
+| Sent / delivered / bounced / opens / clicks / spend | provider | verbatim |
+| Opens / clicks / bounces / complaints / unsubscribes | event log | `count(*)` per type |
+| People who opened / clicked | event log | `count(distinct contact_id)` |
+| Delivery rate | provider ÷ provider | `reported_delivered / reported_sent` |
+| Open rate | **shown twice** | provider `opens ÷ delivered`, and log `people ÷ delivered` |
+
+**The contactability waterfall.** Every customer falls into exactly one bucket
+and the buckets sum to the total — asserted in `tests/analytics.test.ts`:
+
+| Bucket | Kilele | Karoo | Marrakech |
+| --- | --- | --- | --- |
+| Total | 81,842 | 12,406 | 928 |
+| − removed | 395 | 0 | 0 |
+| − no consent | 23,802 | 6,273 | 469 |
+| − unsubscribed (record) | 4,236 | 483 | 0 |
+| − bounced (record) | 2,148 | 202 | 0 |
+| − suppressed | 306 | 0 | 0 |
+| − opted out (event log) | 14,150 | 4,880 | 149 |
+| − bounced (event log) | 620 | 379 | 70 |
+| **= contactable** | **36,185** | **189** | **240** |
+
+Karoo is the case that justifies the whole exercise: its customer records claim
+483 unsubscribes, and the event log holds **4,880** more people who opted out
+without their record being updated. The portal believes the log, and says so on
+screen.
+
+**Which number is least trustworthy** — for point 3 of the 300-word note.
+Karoo's 189 contactable. It is correct under the stated rule, but the rule is
+strict, and the gap between the records and the log means one of the two
+sources is badly stale. A marketer should ask why before sending.
+
+**Performance.** Requirement 5, measured rather than asserted:
+
+| Query | Before | After |
+| --- | --- | --- |
+| Contactability (95k contacts × 371k events) | 4,274 ms | **299 ms** |
+| Campaign performance (69 campaigns) | 3,384 ms | **82 ms** |
+| Campaign detail (one campaign) | — | 104 ms |
+| Search across 81,842 customers | — | 276 ms |
+
+Two structural fixes, not caching. Contactability moved from a join computed on
+every page load to two columns on `contacts`, maintained by a statement-level
+trigger as events arrive — which is also the mechanism phase 6 needs. And
+`count(distinct)` was removed from the campaign list, because a list does not
+need distinct-people counts; only the detail page does.
+
+**Known issue, not a leak.** `notFound()` inside a matched dynamic route
+returns its page with HTTP 200, because the portal layout has already begun
+streaming and the status is committed. Asking for another brand's campaign by
+id shows the not-found page with **zero** rows of that brand's data — verified
+— but the status is wrong for crawlers and uptime checks. Routing-level 404s
+(`/portal/nonexistent`) are unaffected and return 404 correctly. The public
+shared report in phase 7, where guessing actually matters, must not inherit
+this and will be checked separately.

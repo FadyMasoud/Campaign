@@ -1,0 +1,243 @@
+.page {
+  max-inline-size: var(--width-content);
+  margin-inline: auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text);
+}
+
+.panel {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+}
+
+.panelHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+
+.panelTitle {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-5);
+}
+
+.figure {
+  min-inline-size: 0;
+}
+
+.figureLabel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-block-end: var(--space-2);
+}
+
+.figureValue,
+.figureValueAccent {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-tight);
+}
+
+.figureValue {
+  color: var(--color-text);
+}
+
+.figureValueAccent {
+  color: var(--color-accent);
+}
+
+.details {
+  margin-block-start: var(--space-4);
+  border-block-start: 1px solid var(--color-border);
+  padding-block-start: var(--space-4);
+}
+
+.summary {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.summary:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.waterfall,
+.dayTable {
+  inline-size: 100%;
+  max-inline-size: 32rem;
+  border-collapse: collapse;
+  margin-block-start: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.waterfall th,
+.waterfall td,
+.dayTable th,
+.dayTable td {
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--color-border);
+  text-align: start;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+.waterfall td,
+.dayTable td {
+  text-align: end;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.stepLabel {
+  color: var(--color-text-muted);
+  padding-inline-start: var(--space-4);
+}
+
+.stepValue {
+  color: var(--color-text-muted);
+}
+
+.waterfallTotal th,
+.waterfallTotal td {
+  font-weight: 600;
+  color: var(--color-accent);
+  border-block-end: none;
+}
+
+.dayTable {
+  max-block-size: 20rem;
+  overflow-y: auto;
+  display: block;
+}
+
+.note,
+.warn {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  max-inline-size: var(--width-prose);
+  text-wrap: pretty;
+  margin-block-start: var(--space-3);
+}
+
+.note {
+  color: var(--color-text-faint);
+}
+
+.warn {
+  color: var(--color-text);
+  background-color: var(--color-warning-soft);
+  border-inline-start: 3px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+.link {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+/* --- chart --------------------------------------------------------------- */
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  block-size: 8rem;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-sunken);
+}
+
+.barColumn {
+  flex: 1;
+  block-size: 100%;
+  display: flex;
+  align-items: flex-end;
+  min-inline-size: 0;
+}
+
+.bar,
+.barEmpty {
+  inline-size: 100%;
+  border-radius: 2px 2px 0 0;
+  min-block-size: 2px;
+}
+
+.bar {
+  background-color: var(--color-accent);
+}
+
+/* A day with no signups still gets a hairline, so a gap reads as zero rather
+   than as missing data. */
+.barEmpty {
+  background-color: var(--color-border-strong);
+  block-size: 2px;
+}
+
+.chartAxis {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-start: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- empty --------------------------------------------------------------- */
+
+.empty {
+  padding: var(--space-5);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-sunken);
+}
+
+.emptyTitle {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-block-end: var(--space-2);
+}
+
+.emptyBody {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+  max-inline-size: var(--width-prose);
+  text-wrap: pretty;
+}
