@@ -30,8 +30,14 @@ export type SyncResult = {
   error?: string
 }
 
-/** A page is at most 1,000 events; this is a stop, not an expectation. */
-const MAX_PAGES_PER_SYNC = 40
+/** A page is at most 1,000 events; these are stops, not expectations. */
+const MAX_PAGES_PER_BATCH = 40
+
+/**
+ * Across every batch of one send. A 36,185-person send is 73 batches, so the
+ * per-batch stop alone would allow nearly three thousand requests in one go.
+ */
+const MAX_PAGES_PER_SYNC = 400
 
 type SendRow = {
   id: string
@@ -78,71 +84,156 @@ export async function syncSend(sendId: string): Promise<SyncResult> {
   const campaign = Array.isArray(send.campaigns) ? send.campaigns[0] : send.campaigns
   const channel = campaign?.channel ?? 'email'
 
-  let cursor = send.events_cursor
+  /*
+   * Which report streams belong to this send.
+   *
+   * A send is fanned out into one provider call per 500 recipients, and each
+   * call has its own batch reference and its own cursor. Reading only the
+   * first would report on the first 500 people and silently ignore the rest.
+   *
+   * Sends made before fan-out existed have no rows in send_batches, so the
+   * single reference on campaign_sends stands in for one batch. That keeps
+   * every send already on record readable.
+   */
+  const { data: batchRows, error: batchError } = await admin
+    .from('send_batches')
+    .select('id, sequence, provider_batch_id, events_cursor, events_applied')
+    .eq('send_id', send.id)
+    .eq('brand_id', send.brand_id)
+    .order('sequence', { ascending: true })
+
+  if (batchError) return { ...empty, error: batchError.message }
+
+  type Batch = {
+    rowId: number | null
+    batchId: string
+    cursor: string | null
+    applied: number
+  }
+
+  const batches: Batch[] =
+    (batchRows ?? []).length > 0
+      ? (batchRows as Array<{
+          id: number
+          provider_batch_id: string
+          events_cursor: string | null
+          events_applied: number
+        }>).map((row) => ({
+          rowId: row.id,
+          batchId: row.provider_batch_id,
+          cursor: row.events_cursor,
+          applied: row.events_applied,
+        }))
+      : [
+          {
+            rowId: null,
+            batchId: send.provider_batch_id,
+            cursor: send.events_cursor,
+            applied: send.events_applied,
+          },
+        ]
+
   let pages = 0
   let eventsSeen = 0
   let engagementInserted = 0
   let recipientsTouched = 0
   let unmatched = 0
-  let complete = false
+  let complete = true
 
   try {
-    while (pages < MAX_PAGES_PER_SYNC) {
-      const page = await readEvents({ batchId: send.provider_batch_id, since: cursor })
-      pages += 1
-      eventsSeen += page.events.length
+    for (const batch of batches) {
+      let cursor = batch.cursor
+      let appliedHere = 0
+      let batchPages = 0
+      let batchComplete = false
 
-      if (page.events.length > 0) {
-        const { data: applied, error: applyError } = await admin.rpc('apply_provider_reports', {
-          target_brand_id: send.brand_id,
-          target_send_id: send.id,
-          target_campaign_id: send.campaign_id,
-          send_channel: channel,
-          event_ids: page.events.map((event) => event.event_id),
-          recipient_refs: page.events.map((event) => event.recipient_id),
-          event_types: page.events.map((event) => event.type),
-          occurred_ats: page.events.map((event) => event.occurred_at),
-        })
+      while (batchPages < MAX_PAGES_PER_BATCH && pages < MAX_PAGES_PER_SYNC) {
+        const page = await readEvents({ batchId: batch.batchId, since: cursor })
+        pages += 1
+        batchPages += 1
+        eventsSeen += page.events.length
 
-        if (applyError) throw new Error(applyError.message)
+        if (page.events.length > 0) {
+          const { data: applied, error: applyError } = await admin.rpc('apply_provider_reports', {
+            target_brand_id: send.brand_id,
+            target_send_id: send.id,
+            target_campaign_id: send.campaign_id,
+            send_channel: channel,
+            event_ids: page.events.map((event) => event.event_id),
+            recipient_refs: page.events.map((event) => event.recipient_id),
+            event_types: page.events.map((event) => event.type),
+            occurred_ats: page.events.map((event) => event.occurred_at),
+          })
 
-        const result = (applied as Array<{
-          engagement_inserted: number
-          recipients_touched: number
-          unmatched: number
-        }>)?.[0]
+          if (applyError) throw new Error(applyError.message)
 
-        engagementInserted += result?.engagement_inserted ?? 0
-        recipientsTouched += result?.recipients_touched ?? 0
-        unmatched += result?.unmatched ?? 0
+          const result = (applied as Array<{
+            engagement_inserted: number
+            recipients_touched: number
+            unmatched: number
+          }>)?.[0]
+
+          engagementInserted += result?.engagement_inserted ?? 0
+          appliedHere += result?.engagement_inserted ?? 0
+          recipientsTouched += result?.recipients_touched ?? 0
+          unmatched += result?.unmatched ?? 0
+        }
+
+        /*
+         * The cursor is saved after the page is applied, never before. If the
+         * process dies between the two, the same page is read again next time —
+         * which is harmless, because applying it twice does nothing — whereas
+         * saving first would skip a page that was never applied.
+         */
+        cursor = page.nextCursor ?? cursor
+
+        if (batch.rowId === null) {
+          await admin
+            .from('campaign_sends')
+            .update({
+              events_cursor: cursor,
+              events_applied: send.events_applied + engagementInserted,
+              last_synced_at: new Date().toISOString(),
+            })
+            .eq('id', send.id)
+            .eq('brand_id', send.brand_id)
+        } else {
+          await admin
+            .from('send_batches')
+            .update({
+              events_cursor: cursor,
+              events_applied: batch.applied + appliedHere,
+              last_synced_at: new Date().toISOString(),
+            })
+            .eq('id', batch.rowId)
+            .eq('brand_id', send.brand_id)
+        }
+
+        if (!page.hasMore) {
+          batchComplete = true
+          break
+        }
+
+        // A provider that keeps saying "more" while returning nothing would
+        // otherwise spin until the page cap.
+        if (page.events.length === 0) break
       }
 
-      /*
-       * The cursor is saved after the page is applied, never before. If the
-       * process dies between the two, the same page is read again next time —
-       * which is harmless, because applying it twice does nothing — whereas
-       * saving first would skip a page that was never applied.
-       */
-      cursor = page.nextCursor ?? cursor
+      // The send is only finished when every one of its batches is.
+      if (!batchComplete) complete = false
+    }
 
+    // Roll the send's own tally up from its batches, so the send page can show
+    // one figure without reading every batch row.
+    if (batches.some((batch) => batch.rowId !== null)) {
       await admin
         .from('campaign_sends')
         .update({
-          events_cursor: cursor,
           events_applied: send.events_applied + engagementInserted,
           last_synced_at: new Date().toISOString(),
         })
         .eq('id', send.id)
         .eq('brand_id', send.brand_id)
-
-      if (!page.hasMore) {
-        complete = true
-        break
-      }
-
-      // A provider that keeps saying "more" while returning nothing would
-      // otherwise spin until the page cap.
-      if (page.events.length === 0) break
     }
   } catch (syncError) {
     return {

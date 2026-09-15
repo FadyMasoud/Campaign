@@ -614,3 +614,78 @@ does not zoom on focus; touch targets are at least 44px.
 - **Rotate the keys.** The service-role key and the dispatcher key both passed
   through an AI chat transcript during the build.
 - How long it took, earliest start date, notice period.
+
+### Phase 9 — the half-send the portal caused itself
+
+Found during the final sweep, by reading the stored rows back rather than by
+running a test. Three Kilele sends recorded `approved_count` 23,969 and 35,507
+while `send_recipients` held exactly 1,000 rows each.
+
+**Fault 1 — PostgREST caps responses at 1,000 rows, silently.**
+`db.max_rows` is 1,000 on this project. `.limit(50_000)` and `.range(0, 49_999)`
+both return exactly 1,000 rows and no error. The audience freeze in
+`src/lib/send/dispatch.ts` trusted its own `.limit()`, so it froze the first
+1,000 contactable people and reported the full approved figure on screen. The
+count came from a separate `count: 'exact'` query, which is accurate above
+1,000 — so the two numbers disagreed and only one of them had rows behind it.
+This is precisely the silent half-send the brief warns about, except the portal
+was the one committing it.
+
+The reader now pages with `.range()` a thousand at a time, ordered by `id`.
+The order is part of the fix, not decoration: without a deterministic sort,
+Postgres may return rows in a different order per page, so a person can appear
+on two pages (sent twice) or on none (never sent).
+
+**Fault 2 — the provider's documented limit is wrong.**
+`GET /v1/docs` claims "Up to 100,000 recipients per call" and that `rejected`
+is "normally empty". Three sends of 1,000 came back accepted 500 / rejected
+500; a send of 240 came back 240 / 0. The real ceiling is 500. (Same provider
+whose docs promise events arrive "exactly once and in order"; they repeat and
+arrive out of order.) Fixing fault 1 alone would have made a 23,969-person send
+honest but useless — 500 sent, 23,469 refused.
+
+A send now fans out into one provider call per 500 recipients, each with its
+own idempotency key (`{sendId}:{index}`) and its own row in the new
+`send_batches` table, written before the next call starts. If the process dies
+at batch 30 of 48, the thirty that went are on record and the eighteen that did
+not are still `queued`. Delivery-report polling walks the same list, each batch
+carrying its own cursor — one cursor for the whole send would re-read batch 1
+forty-eight times.
+
+**Fault 3 — found by the new test, not by reading.**
+Marking a chunk's outcome used `.in('contact_id', [...])`, which PostgREST
+renders into the query string: 500 uuids is an 18 KB URL, past what most
+proxies accept, and it fails as a malformed request rather than a short one.
+Replaced with `public.mark_send_recipients()`, taking arrays in a POST body —
+the same shape `apply_provider_reports()` already used. It resolves references
+only within the caller's brand, so a reference belonging to another tenant
+matches nobody.
+
+**Fault 4 — a revoke that did not revoke.**
+The first version of that function ended `revoke all ... from anon,
+authenticated`, which reads as a lock and is not one: Postgres grants EXECUTE
+on a new function to `PUBLIC`, and `authenticated` holds it through `PUBLIC`
+rather than in its own right. The test that signs in as a real owner and calls
+the function expected an error and got a result. Corrected in
+`20260915130000_mark_recipients_grants.sql` with `revoke ... from public`,
+which is what every other function in this project already did.
+
+**Coverage added** (190 → 196 tests):
+
+- the 1,000-row cap is asserted directly, so the paging test is not theatre
+- the reader returns every contactable person for a 23,955-row brand, each once
+- the reader never reaches outside the brand it was asked for
+- `mark_send_recipients` marks only the named recipients, ignores a reference
+  from another brand, and leaves unnamed recipients `queued` rather than
+  assuming they were sent
+- it cannot be called by a signed-in owner
+- batches are per-brand isolated, and a sequence cannot be reused
+
+The first version of the paging test failed at 23,955 against an expected
+24,112. The 157 difference was people under an unexpired suppression, which the
+audience is right to exclude and the test's count query had forgotten — the
+test was wrong, not the reader.
+
+Three Kilele sends still carry the truncated figures. They are left as they
+happened: rewriting a send record to look better is the one thing this portal
+exists not to do. The send screen now states the gap in plain words.

@@ -272,3 +272,216 @@ describe('the record of an approval is immutable and isolated', () => {
     expect(progress ?? []).toHaveLength(0)
   })
 })
+
+/*
+ * The half-send the portal caused itself.
+ *
+ * PostgREST caps every response at db.max_rows — 1,000 here — and does it
+ * silently: .limit(50000) and .range(0, 49999) both return exactly 1,000 rows
+ * and no error. The audience freeze trusted that, so a Kilele send recorded
+ * approved_count 23,969 while only the first 1,000 people were ever written to
+ * send_recipients, and the screen showed the larger number.
+ *
+ * These go at the cap directly. A test that only counted rows after a send
+ * would have passed for Marrakech's 240 and failed silently for everyone else,
+ * which is exactly how the bug survived the first suite.
+ */
+describe('the audience is read whole, not to the first page', () => {
+  it('confirms the cap is real, so the test below is not theatre', async () => {
+    const brandId = brandIds.get('KILELE')!
+    const { data } = await admin
+      .from('contacts')
+      .select('id')
+      .eq('brand_id', brandId)
+      .limit(50_000)
+
+    // If this ever stops being 1,000, db.max_rows changed and the paging
+    // below can be reconsidered — but not before.
+    expect(data?.length).toBe(1_000)
+  })
+
+  it('reads past 1,000 contactable people for a large brand', async () => {
+    const brandId = brandIds.get('KILELE')!
+
+    const { count } = await admin
+      .from('contacts')
+      .select('*', { count: 'exact', head: true })
+      .eq('brand_id', brandId)
+      .is('deleted_at', null)
+      .eq('consent_marketing', true)
+      .not('status', 'in', '("unsubscribed","bounced")')
+      .is('opted_out_at', null)
+      .is('bounced_at', null)
+      // Suppression is part of the rule, and leaving it out of the count here
+      // was the first version of this test: it expected 24,112 and the reader
+      // returned 23,955. The 157 difference is people under a suppression that
+      // has not expired, whom the audience is right to leave out.
+      .or(`suppressed_until.is.null,suppressed_until.lte.${new Date().toISOString()}`)
+      .not('phone_e164', 'is', null)
+
+    expect(count).toBeGreaterThan(1_000)
+
+    const { readWholeAudience } = await import('@/lib/send/dispatch')
+    const audience = await readWholeAudience({ admin, brandId, channel: 'sms' })
+
+    // Everyone the count promised, and each of them once. A non-deterministic
+    // page order would show up here as duplicates and a short total.
+    expect(audience.length).toBe(count)
+    expect(new Set(audience.map((person) => person.contact_id)).size).toBe(count)
+  })
+
+  it('never reaches outside the brand it was asked for', async () => {
+    const brandId = brandIds.get('MARRAKECH')!
+    const { readWholeAudience } = await import('@/lib/send/dispatch')
+    const audience = await readWholeAudience({ admin, brandId, channel: 'email' })
+
+    expect(audience.length).toBeGreaterThan(0)
+
+    const ids = audience.map((person) => person.contact_id)
+    const { count: foreign } = await admin
+      .from('contacts')
+      .select('*', { count: 'exact', head: true })
+      .neq('brand_id', brandId)
+      .in('id', ids.slice(0, 200))
+
+    expect(foreign).toBe(0)
+  })
+})
+
+describe('recording a batch outcome', () => {
+  it('marks only the named recipients, and only within the brand', async () => {
+    const brandCode = 'MARRAKECH'
+    const brandId = brandIds.get(brandCode)!
+    const campaignId = await freeCampaign(brandCode)
+    const approval = await approveAs('owner@marrakech.vg-eval.test', brandCode, campaignId)
+    const sendId = approval.data!.id
+
+    // Three of this brand's contacts, frozen as a miniature send.
+    const { data: people } = await admin
+      .from('contacts')
+      .select('id, external_id, email')
+      .eq('brand_id', brandId)
+      .not('email', 'is', null)
+      .limit(3)
+
+    await admin.from('send_recipients').insert(
+      (people ?? []).map((person) => ({
+        brand_id: brandId,
+        send_id: sendId,
+        contact_id: person.id,
+        channel: 'email' as const,
+        destination: person.email!,
+        status: 'queued' as const,
+      })),
+    )
+
+    // One from another brand entirely, named the way a forged provider
+    // response would name it.
+    const { data: outsider } = await admin
+      .from('contacts')
+      .select('external_id')
+      .eq('brand_id', brandIds.get('KILELE')!)
+      .limit(1)
+      .single()
+
+    const { data: marked, error } = await admin.rpc('mark_send_recipients', {
+      target_brand_id: brandId,
+      target_send_id: sendId,
+      accepted_refs: [people![0].external_id, outsider!.external_id],
+      rejected_refs: [people![1].external_id],
+    })
+
+    expect(error).toBeNull()
+
+    const result = (marked as unknown as Array<{ accepted: number; rejected: number }>)[0]
+    // Two named as accepted, but the outsider resolves to nobody in this
+    // brand, so exactly one is marked.
+    expect(result.accepted).toBe(1)
+    expect(result.rejected).toBe(1)
+
+    const { data: after } = await admin
+      .from('send_recipients')
+      .select('contact_id, status')
+      .eq('send_id', sendId)
+
+    const byContact = new Map((after ?? []).map((row) => [row.contact_id, row.status]))
+    expect(byContact.get(people![0].id)).toBe('accepted')
+    expect(byContact.get(people![1].id)).toBe('rejected')
+    // Never named, so still untouched rather than assumed sent.
+    expect(byContact.get(people![2].id)).toBe('queued')
+  })
+
+  it('cannot be called by a signed-in user', async () => {
+    const client = sessions.get('owner@marrakech.vg-eval.test')!
+    const { error } = await client.rpc('mark_send_recipients', {
+      target_brand_id: brandIds.get('MARRAKECH')!,
+      target_send_id: '00000000-0000-0000-0000-000000000000',
+      accepted_refs: [],
+      rejected_refs: [],
+    })
+
+    expect(error).not.toBeNull()
+  })
+})
+
+describe('a send that spans several provider batches', () => {
+  it('keeps each batch on its own row, isolated from other brands', async () => {
+    const brandCode = 'MARRAKECH'
+    const brandId = brandIds.get(brandCode)!
+    const campaignId = await freeCampaign(brandCode)
+    const approval = await approveAs('owner@marrakech.vg-eval.test', brandCode, campaignId)
+    const sendId = approval.data!.id
+
+    await admin.from('send_batches').insert([
+      {
+        brand_id: brandId,
+        send_id: sendId,
+        sequence: 0,
+        provider_batch_id: 'batch_test_a',
+        recipient_count: 500,
+        accepted_count: 500,
+      },
+      {
+        brand_id: brandId,
+        send_id: sendId,
+        sequence: 1,
+        provider_batch_id: 'batch_test_b',
+        recipient_count: 120,
+        accepted_count: 120,
+      },
+    ])
+
+    // The owner of this brand sees both.
+    const mine = sessions.get('owner@marrakech.vg-eval.test')!
+    const { data: visible } = await mine
+      .from('send_batches')
+      .select('provider_batch_id, recipient_count')
+      .eq('send_id', sendId)
+      .order('sequence')
+
+    expect(visible?.map((row) => row.provider_batch_id)).toEqual(['batch_test_a', 'batch_test_b'])
+    // 620 recipients over two calls, because the provider will not take them
+    // in one.
+    expect((visible ?? []).reduce((sum, row) => sum + row.recipient_count, 0)).toBe(620)
+
+    // Another brand sees nothing at all.
+    const theirs = sessions.get('owner@kilele.vg-eval.test')!
+    const { data: leaked } = await theirs
+      .from('send_batches')
+      .select('provider_batch_id')
+      .eq('send_id', sendId)
+
+    expect(leaked).toEqual([])
+
+    // A sequence cannot be reused, so a retried chunk cannot double-count.
+    const { error: duplicate } = await admin.from('send_batches').insert({
+      brand_id: brandId,
+      send_id: sendId,
+      sequence: 0,
+      provider_batch_id: 'batch_test_c',
+      recipient_count: 1,
+    })
+
+    expect(duplicate?.code).toBe('23505')
+  })
+})

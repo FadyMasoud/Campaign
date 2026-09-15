@@ -17,7 +17,15 @@ export default defineConfig({
     // `@/…` is configured for TypeScript and for Next.js in tsconfig.json, but
     // Vitest resolves modules itself and does not read the paths from there.
     // Without this the unit tests cannot import anything from src/.
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+
+      // `server-only` throws on import outside a React Server Component, which
+      // is the point of it in the app and an obstacle here: the tests drive
+      // server modules directly. The guarantee it provides is enforced at
+      // build time, and the build still enforces it.
+      'server-only': fileURLToPath(new URL('./tests/stubs/server-only.ts', import.meta.url)),
+    },
   },
   test: {
     environment: 'node',

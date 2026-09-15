@@ -67,6 +67,29 @@ export default async function SendRecordPage({
   const { data: progress } = await supabase.rpc('send_progress', { target_send_id: sendId })
   const byStatus = (progress ?? []) as Array<{ status: string; recipient_count: number }>
 
+  /*
+   * A send is handed over in batches of 500, because that is all the provider
+   * will take in one call whatever its documentation says. Showing them is not
+   * decoration: when a send stops half way, the batch list is what says how
+   * far it got, and re-reading delivery reports walks this same list.
+   */
+  const { data: batchRows } = await supabase
+    .from('send_batches')
+    .select('sequence, provider_batch_id, recipient_count, accepted_count, rejected_count, events_applied')
+    .eq('send_id', sendId)
+    .order('sequence', { ascending: true })
+
+  const batches = (batchRows ?? []) as Array<{
+    sequence: number
+    provider_batch_id: string
+    recipient_count: number
+    accepted_count: number
+    rejected_count: number
+    events_applied: number
+  }>
+
+  const handedOver = batches.reduce((sum, batch) => sum + batch.recipient_count, 0)
+
   const campaign = Array.isArray(send.campaigns) ? send.campaigns[0] : send.campaigns
   const when = (iso: string | null) =>
     iso
@@ -129,13 +152,59 @@ export default async function SendRecordPage({
         {halfSent ? (
           <p className={styles.warning}>
             The provider accepted {send.accepted_count?.toLocaleString('en')} of the{' '}
-            {send.approved_count.toLocaleString('en')} approved. The difference did
-            not go out. This is stated rather than rounded away, because a send
-            that quietly reached fewer people than approved is the failure this
-            screen exists to make visible.
+            {send.approved_count.toLocaleString('en')} approved
+            {handedOver > 0 && handedOver < send.approved_count ? (
+              <>
+                , and only {handedOver.toLocaleString('en')} were handed over at all —
+                the send stopped part way through
+              </>
+            ) : null}
+            . The difference did not go out. This is stated rather than rounded
+            away, because a send that quietly reached fewer people than approved
+            is the failure this screen exists to make visible.
           </p>
         ) : null}
       </section>
+
+      {batches.length > 0 ? (
+        <section className={styles.panel} aria-labelledby="batches">
+          <h2 id="batches" className={styles.panelTitle}>
+            How it was handed over
+          </h2>
+
+          <p className={styles.countNote}>
+            {batches.length === 1
+              ? 'One call to the messaging provider.'
+              : `${batches.length} calls to the messaging provider, of at most 500 recipients each. `}
+            {batches.length > 1
+              ? 'The provider will not accept more than that in one call, whatever its documentation says, so a send is split until it fits.'
+              : ''}
+          </p>
+
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th scope="col">Batch</th>
+                <th scope="col">Provider reference</th>
+                <th scope="col">Handed over</th>
+                <th scope="col">Accepted</th>
+                <th scope="col">Refused</th>
+              </tr>
+            </thead>
+            <tbody>
+              {batches.map((batch) => (
+                <tr key={batch.sequence}>
+                  <th scope="row">{batch.sequence + 1} of {batches.length}</th>
+                  <td className={styles.mono}>{batch.provider_batch_id}</td>
+                  <td>{batch.recipient_count.toLocaleString('en')}</td>
+                  <td>{batch.accepted_count.toLocaleString('en')}</td>
+                  <td>{batch.rejected_count.toLocaleString('en')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ) : null}
 
       <section className={styles.panel} aria-labelledby="progress">
         <h2 id="progress" className={styles.panelTitle}>
