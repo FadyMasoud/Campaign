@@ -28,6 +28,17 @@ html {
 
 body {
   min-block-size: 100dvh;
+
+  /*
+   * A column, so the footer is at the bottom of the viewport from the FIRST
+   * paint. Without this, a page still streaming is shorter than the screen,
+   * the footer renders immediately after the content it has so far, and then
+   * jumps downward as the rest arrives - which reads as a flash on every
+   * navigation and refresh.
+   */
+  display: flex;
+  flex-direction: column;
+
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-ui);
@@ -40,6 +51,12 @@ body {
      than rendered. Cheap, and a large part of the "editorial" feel. */
   text-rendering: optimizeLegibility;
   font-kerning: normal;
+}
+
+/* The page takes whatever height is left over, which is what holds the footer
+   down while the rest of the page is still arriving. */
+body > :first-child {
+  flex: 1 0 auto;
 }
 
 /* --- Headings -------------------------------------------------------------

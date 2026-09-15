@@ -131,9 +131,41 @@ export default async function CampaignsPage({
         </p>
       ) : null}
 
-      {/* A plain GET form: works without JavaScript, and the result is a real
-          URL somebody can bookmark. */}
-      <form id="campaign-filters" method="get" action="/portal/campaigns" role="search" />
+      {/*
+        The search sits above the table rather than inside its head. With only
+        three controls and eight columns, a filter row left most of the header
+        empty and pushed the figures down; a toolbar reads as one thing to fill
+        in.
+
+        Still a plain GET form: it works with JavaScript disabled, the result
+        is a real URL somebody can bookmark, and the back button behaves.
+      */}
+      <form method="get" action="/portal/campaigns" className={styles.searchBar} role="search">
+        <label htmlFor="c-q" className={styles.srOnly}>Search campaign name</label>
+        <input
+          id="c-q" name="q" type="search" defaultValue={params.q ?? ''}
+          placeholder="Campaign name" className={styles.searchInput}
+        />
+
+        <label htmlFor="c-ref" className={styles.srOnly}>Search reference</label>
+        <input
+          id="c-ref" name="ref" type="search" defaultValue={params.ref ?? ''}
+          placeholder="Reference, e.g. KIL-0001" className={styles.searchInput}
+        />
+
+        <label htmlFor="c-sent" className={styles.srOnly}>Filter by send status</label>
+        <select id="c-sent" name="sent" defaultValue={sentFilter} className={styles.searchSelect}>
+          <option value="all">All campaigns</option>
+          <option value="sent">Sent</option>
+          <option value="unsent">Not sent</option>
+        </select>
+
+        <button type="submit" className={styles.searchButton}>Search</button>
+
+        {filtered ? (
+          <Link href="/portal/campaigns" className={styles.clearLink}>Clear</Link>
+        ) : null}
+      </form>
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>
@@ -157,43 +189,6 @@ export default async function CampaignsPage({
               <th scope="col" className={styles.thNum}>Opt-outs</th>
             </tr>
 
-            {/* One search box per column, under its own heading, so it is
-                obvious which field each searches. The inputs reach the form
-                through the `form` attribute, because a <form> cannot legally
-                be a child of <table>. */}
-            <tr className={styles.filterRow}>
-              <td>
-                <label htmlFor="c-q" className={styles.srOnly}>Search campaign name</label>
-                <input
-                  id="c-q" name="q" form="campaign-filters" type="search"
-                  defaultValue={params.q ?? ''} placeholder="Campaign name"
-                  className={styles.columnInput}
-                />
-                <label htmlFor="c-ref" className={styles.srOnly}>Search reference</label>
-                <input
-                  id="c-ref" name="ref" form="campaign-filters" type="search"
-                  defaultValue={params.ref ?? ''} placeholder="KIL-0001"
-                  className={styles.columnInputSmall}
-                />
-              </td>
-              <td colSpan={5} />
-              <td>
-                <label htmlFor="c-sent" className={styles.srOnly}>Filter by send status</label>
-                <select
-                  id="c-sent" name="sent" form="campaign-filters"
-                  defaultValue={sentFilter} className={styles.columnSelect}
-                >
-                  <option value="all">All</option>
-                  <option value="sent">Sent</option>
-                  <option value="unsent">Not sent</option>
-                </select>
-              </td>
-              <td>
-                <button type="submit" form="campaign-filters" className={styles.filterButton}>
-                  Search
-                </button>
-              </td>
-            </tr>
           </thead>
           <tbody>
             {visible.map((campaign) => {
