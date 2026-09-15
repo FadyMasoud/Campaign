@@ -337,3 +337,99 @@
 .dotDelivered { background-color: var(--color-success-fill); }
 .dotBounced   { background-color: var(--color-danger-fill); }
 .dotRejected  { background-color: var(--color-warning-fill); }
+
+/* =========================================================================
+   Redesign: the send as three numbered steps
+   ====================================================================== */
+
+.step,
+.stepFinal {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+}
+
+/* The last step is the one with consequences, so it is the only one that
+   carries the accent. */
+.stepFinal {
+  border-color: var(--color-accent-fill);
+  border-width: 2px;
+  background-color: var(--color-accent-soft);
+}
+
+.stepHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+
+.stepNumber,
+.stepNumberFinal {
+  flex-shrink: 0;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-on-navy-strong);
+}
+
+.stepNumber { background-color: var(--color-text-muted); }
+.stepNumberFinal { background-color: var(--color-accent-fill); }
+
+.stepTitle {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  color: var(--color-text);
+  line-height: var(--leading-tight);
+}
+
+.sampleIntro {
+  margin-block: var(--space-4) var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* An analyst who typed the URL. Plain, not alarming — they did nothing wrong. */
+.refusal {
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+}
+
+.refusalTitle {
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  color: var(--color-text);
+  margin-block-end: var(--space-3);
+}
+
+.refusalBody {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+  max-inline-size: var(--width-prose);
+  text-wrap: pretty;
+  margin-block-end: var(--space-4);
+}
+
+.backButton {
+  display: inline-block;
+  padding: var(--space-3) var(--space-5);
+  min-block-size: 2.75rem;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-on-accent);
+  background-color: var(--color-accent);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+}
+
+.backButton:hover { background-color: var(--color-accent-hover); }
