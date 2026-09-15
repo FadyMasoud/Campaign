@@ -1,0 +1,116 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Growth Engineer build task — Fady Masoud</title><style>
+@page { size: A4; margin: 18mm 16mm 16mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 10.5pt; line-height: 1.55; color: #0B1F33; margin: 0;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+h1, h2, h3, h4 { font-family: "IBM Plex Serif", Georgia, serif; line-height: 1.25; }
+h1 { font-size: 20pt; margin: 0 0 4pt; }
+h2 {
+  font-size: 14pt; margin: 20pt 0 6pt; padding-bottom: 4pt;
+  border-bottom: 2px solid #0D9488; color: #0B1F33;
+  break-after: avoid;
+}
+h3 { font-size: 11.5pt; margin: 14pt 0 4pt; color: #0D9488; break-after: avoid; }
+p { margin: 0 0 7pt; }
+hr { border: 0; border-top: 1px solid #E2E8F0; margin: 14pt 0; }
+a { color: #0F766E; text-decoration: none; word-break: break-all; }
+strong { color: #0B1F33; }
+code {
+  font-family: "IBM Plex Mono", Consolas, monospace; font-size: 9pt;
+  background: #F1F5F9; padding: 1pt 3pt; border-radius: 3px;
+  /* A code span moves to the next line whole; only a token too long for one
+     line breaks at all. break-all split `send_batches` across two lines. */
+  overflow-wrap: anywhere;
+}
+pre {
+  background: #F8FAFC; border: 1px solid #E2E8F0; border-left: 3px solid #0D9488;
+  padding: 7pt 9pt; border-radius: 4px; overflow-wrap: anywhere; white-space: pre-wrap;
+  margin: 0 0 8pt;
+}
+pre code { background: none; padding: 0; font-size: 8.5pt; }
+table {
+  width: 100%; border-collapse: collapse; margin: 0 0 9pt; font-size: 9.5pt;
+  break-inside: avoid;
+}
+th {
+  background: #0B1F33; color: #fff; text-align: left; padding: 5pt 7pt;
+  font-weight: 600; font-size: 9pt;
+}
+td { padding: 5pt 7pt; border-bottom: 1px solid #E2E8F0; vertical-align: top; }
+tbody tr:nth-child(even) { background: #F8FAFC; }
+ul { margin: 0 0 8pt; padding-left: 16pt; }
+li { margin-bottom: 3pt; }
+</style></head><body><p><strong>Subject:</strong> Growth Engineer build task — Fady Masoud</p>
+<p>Hi,</p>
+<p>The client campaign portal is built and deployed. Everything from the submission list is below, in your order.</p>
+<hr>
+<h2>What&#x27;s in it</h2>
+<p>Three brands — Kilele Rides, Karoo Coaches, Marrakech Express — in one portal, 95,176 customers between them. The largest brand is about 90× the smallest, which is what everything was sized against.</p>
+<ul><li><strong>Dashboard</strong> — total customers, how many are contactable, signups per day over the last 30 days, and how each campaign performed.</li><li><strong>Contacts</strong> — the full list, searchable per column, 20 to a page.</li><li><strong>Campaigns</strong> — every campaign with its provider figures beside its event-log figures, and a <strong>View</strong> button through to the detail.</li><li><strong>Imports</strong> — what loaded, what was refused, and why, in plain English.</li><li><strong>Sending</strong> — preview, confirm, and a send record that keeps what was approved.</li><li><strong>Shared link</strong> — one campaign&#x27;s aggregates, password-protected, for someone with no account.</li></ul>
+<p>Every number on screen says how it was counted. Provider-reported figures and event-log counts sit side by side and are never added together, because they disagree — and showing both is more honest than picking one and calling it the truth.</p>
+<hr>
+<h2>The standard build</h2>
+<h3>1. Live URL</h3>
+<p><strong><a href="https://campaign-five-flax.vercel.app">https://campaign-five-flax.vercel.app</a></strong></p>
+<h3>2. The six logins</h3>
+<table><thead><tr><th>Email</th><th>Password</th><th>Brand</th><th>Role</th></tr></thead><tbody>
+<tr><td>owner@kilele.vg-eval.test</td><td><code>Kilele-Owner-2026</code></td><td>Kilele Rides</td><td>owner</td></tr>
+<tr><td>analyst@kilele.vg-eval.test</td><td><code>Kilele-Analyst-2026</code></td><td>Kilele Rides</td><td>analyst</td></tr>
+<tr><td>owner@karoo.vg-eval.test</td><td><code>Karoo-Owner-2026</code></td><td>Karoo Coaches</td><td>owner</td></tr>
+<tr><td>analyst@karoo.vg-eval.test</td><td><code>Karoo-Analyst-2026</code></td><td>Karoo Coaches</td><td>analyst</td></tr>
+<tr><td>owner@marrakech.vg-eval.test</td><td><code>Marrakech-Owner-2026</code></td><td>Marrakech Express</td><td>owner</td></tr>
+<tr><td>analyst@marrakech.vg-eval.test</td><td><code>Marrakech-Analyst-2026</code></td><td>Marrakech Express</td><td>analyst</td></tr>
+</tbody></table>
+<p>Each lands in its own brand&#x27;s portal. Owners can send; analysts cannot — and not because the button is hidden. If an analyst writes straight to the database, bypassing the interface entirely, Postgres refuses it.</p>
+<h3>3. Google sign-in</h3>
+<p><strong>Live.</strong> Sign in with Google from the same login screen and it works for any of the six.</p>
+<p>A Google account that is <em>not</em> one of the six authenticates successfully and lands on <code>/no-access</code> with no data. That is deliberate: signing in proves who somebody is, not that they belong to a brand. Those are separate questions and the portal answers them separately.</p>
+<h3>4. Supabase</h3>
+<ul><li><strong>Project URL</strong> — <code>https://hhovyvkphaqniunvjoyw.supabase.co</code></li><li><strong>Anon (publishable) key</strong> — <code>sb_publishable_Yw4c8cPu7aUuR72DGRXqvA_KccBLcHg</code></li></ul>
+<p><strong>Which key the deployed app uses:</strong> the <strong>publishable</strong> key, everywhere user-facing. The service-role key is server-only and never reaches a browser. The two modules that hold it begin with <code>import &#x27;server-only&#x27;</code>, so a client component importing them fails the build rather than shipping the secret.</p>
+<p><strong>Tables (11)</strong></p>
+<p><code>brands</code>, <code>brand_members</code>, <code>contacts</code>, <code>campaigns</code>, <code>contact_events</code>, <code>import_runs</code>, <code>import_issues</code>, <code>campaign_sends</code>, <code>send_recipients</code>, <code>send_batches</code>, <code>shared_reports</code></p>
+<p><strong>Functions (16)</strong> — 11 callable in <code>public</code>, 5 helpers in <code>app</code>, which is not exposed through the API</p>
+<table><thead><tr><th>Area</th><th>Functions</th></tr></thead><tbody>
+<tr><td>Isolation and roles</td><td><code>app.current_user_brand_ids()</code>, <code>app.is_brand_owner()</code></td></tr>
+<tr><td>Analytics</td><td><code>public.contactability_breakdown()</code>, <code>public.signups_per_day()</code>, <code>public.campaign_performance()</code>, <code>public.campaign_engagement_detail()</code></td></tr>
+<tr><td>Import</td><td><code>public.import_issue_summary()</code></td></tr>
+<tr><td>Send and provider</td><td><code>public.send_progress()</code>, <code>public.apply_provider_reports()</code>, <code>public.mark_send_recipients()</code></td></tr>
+<tr><td>Shared link</td><td><code>public.unlock_shared_report()</code>, <code>public.hash_report_password()</code></td></tr>
+<tr><td>Security audit</td><td><code>public.security_coverage()</code></td></tr>
+<tr><td>Internal helpers</td><td><code>app.apply_contact_events()</code>, <code>app.delivery_rank()</code>, <code>app.touch_updated_at()</code></td></tr>
+</tbody></table>
+<h3>5. The repo</h3>
+<p><strong><a href="https://github.com/FadyMasoud/Campaign">https://github.com/FadyMasoud/Campaign</a></strong> — public.</p>
+<p>Real history, committed phase by phase as the work happened; it is not a single squashed drop. <code>schema.sql</code> is at the root, generated from the 13 migrations. <code>README.md</code> is at the root, and <code>docs/</code> holds the AI-usage log, a brief-to-build traceability document, and a project handbook.</p>
+<h3>6. AI tools, time, availability</h3>
+<ul><li><strong>AI tools</strong> — Claude (Opus 5) via Claude Code, used as a pair-programmer. Disclosed phase by phase in <code>docs/AI-USAGE.md</code>, including the places I overruled it and why.</li><li><strong>How long it took</strong> — <strong>[fill in]</strong></li><li><strong>Earliest start date</strong> — <strong>[fill in]</strong></li><li><strong>Notice period</strong> — <strong>[fill in]</strong></li></ul>
+<hr>
+<h2>The send and the shared link</h2>
+<h3>7. Where the send&#x27;s progress and results are recorded</h3>
+<p><strong>On screen</strong> — <code>/portal/sends/{id}</code>: what was approved and by whom, when it went, how many the provider accepted, how many it refused, how it was handed over, where every recipient stands, and a timeline.</p>
+<p><strong>In the database</strong></p>
+<ul><li><code>campaign_sends</code> — one row per approved send, with the provider reference.</li><li><code>send_recipients</code> — the frozen audience, one row per person, with delivery status. Frozen at approval, so the record still shows where the message actually went even if the customer later changes their address.</li><li><code>send_batches</code> — one row per call to the provider, because a send of any real size takes more than one.</li></ul>
+<p>A real send is on record: <strong>Marrakech <code>MAR-0001</code> — 240 approved, 240 accepted</strong>, provider batch <strong><code>batch_50e1f5a496627f640a36</code></strong>. Delivery reports have been pulled back: <strong>223 delivered, 17 bounced</strong>.</p>
+<p>Three earlier Kilele sends are also there, showing smaller figures than they approved. That is not a display problem — it is the bug described in the note below, which I found late by reading the stored rows back. The code is fixed and covered by tests; those three rows are left as they happened rather than tidied up, because rewriting a send record to look better is the one thing this portal is built not to do.</p>
+<h3>8. The provider key</h3>
+<p><code>vgk_c5d8fd95e33712d8c402702a9180543e921ba180022aa084</code></p>
+<p>You can read the same delivery record I can:</p>
+<pre><code>curl -H &quot;Authorization: Bearer vgk_c5d8fd95e33712d8c402702a9180543e921ba180022aa084&quot; \
+  https://dispatcher-production-72fc.up.railway.app/v1/messages/batch_50e1f5a496627f640a36/events</code></pre>
+<h3>9. The shared link</h3>
+<p><strong><a href="https://campaign-five-flax.vercel.app/r/Ls8kBOfYEKahQas6qUnfwchCZY2Hjp8R0knPZsdzAxc">https://campaign-five-flax.vercel.app/r/Ls8kBOfYEKahQas6qUnfwchCZY2Hjp8R0knPZsdzAxc</a></strong></p>
+<p><strong>Password:</strong> <code>velocity-review-2026</code></p>
+<p>One campaign&#x27;s aggregates and nothing else. Before the password it shows only the password box — no campaign name, no figures. A guessed token returns not-found with a <code>noindex</code> tag rather than confirming anything exists.</p>
+<h3>10. The note (289 words)</h3>
+<p><strong>What I tried to break.</strong> I replaced the <code>contacts</code> RLS policy with <code>using (true)</code> and re-ran the suite: five assertions failed and <em>&quot;sees their own contact&quot;</em> stayed green, which is what distinguishes isolated from empty. I confirmed a send twice from two sessions at once — one wins, one is refused by a unique index, not a disabled button. As an analyst I inserted straight into <code>campaign_sends</code>; the database refused it. The provider sent an event whose id was literally <code>evt-batch_50-forged</code>, claiming KAROO, naming a KILELE contact, inside a MARRAKECH batch — discarded, because a provider&#x27;s own label never decides which tenant a row belongs to.</p>
+<p>The worst one I found by reading the live data back, not by testing. PostgREST caps every response at 1,000 rows <em>silently</em> — no error, just a plausible answer. A Kilele send recorded 23,969 approved while only the first 1,000 were ever frozen or sent to: the portal was the half-sender. Fixing that exposed a second lie — the provider&#x27;s docs promise 100,000 recipients per call and an empty <code>rejected</code> array, but it caps at 500. A send now fans out into as many calls as it needs, each recorded in <code>send_batches</code>.</p>
+<p><strong>Where isolation lives.</strong> <code>supabase/migrations/20260913160000_brands_and_isolation.sql:104</code> — <code>app.current_user_brand_ids()</code>. Every policy in the project is one line referring to it.</p>
+<p><strong>The number I trust least.</strong> Karoo&#x27;s 189 contactable. Correct under the stated rule, but Karoo&#x27;s customer records claim 483 unsubscribes while the event log holds 4,880 more people who opted out. One source is badly stale, and the portal says so on screen rather than picking.</p>
+<p><strong>What isn&#x27;t finished.</strong> Three early Kilele sends still carry the truncated figures, kept rather than rewritten. Delivery reports are polled on demand, not scheduled. Arabic was dropped deliberately.</p>
+<hr>
+<p>Thanks for putting this together — it was a genuinely good brief to build against, and the provider behaving nothing like its documentation was the best part of it.</p>
+<p>Fady</p></body></html>
