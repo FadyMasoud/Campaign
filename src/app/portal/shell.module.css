@@ -5,7 +5,9 @@
    screenful is navigation you have to scroll back to find. */
 
 .shell {
-  min-block-size: 100dvh;
+  /* Not 100dvh: the footer follows this element, and a full-viewport shell
+     would push it below the fold on every page. */
+  min-block-size: calc(100dvh - 8rem);
   background-color: var(--color-bg);
 }
 
@@ -30,7 +32,6 @@
   /* The rail is fixed, so the content is inset by its width rather than
      sitting in a flex sibling — that keeps the page a single scroll region. */
   margin-inline-start: var(--sidebar-width);
-  min-block-size: 100dvh;
 }
 
 /* --- brand --------------------------------------------------------------- */

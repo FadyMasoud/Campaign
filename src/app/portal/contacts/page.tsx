@@ -8,7 +8,7 @@ import styles from './contacts.module.css'
 export const metadata: Metadata = { title: 'Customers · Campaign Portal' }
 export const dynamic = 'force-dynamic'
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 20
 
 type ContactRow = {
   id: string
@@ -30,9 +30,9 @@ type ContactRow = {
 type Filter = 'all' | 'contactable' | 'unreachable'
 
 /**
- * Reachability for one customer, worked out from the same rule the dashboard
- * waterfall uses. Kept as one function so the list and the totals can never
- * drift into disagreeing about who is contactable.
+ * Reachability for one customer, by the same rule the dashboard waterfall
+ * uses. One function, so the list and the totals can never drift into
+ * disagreeing about who is contactable.
  */
 function reachability(row: ContactRow): { contactable: boolean; reason: string } {
   if (row.deleted_at) return { contactable: false, reason: 'Removed' }
@@ -42,20 +42,31 @@ function reachability(row: ContactRow): { contactable: boolean; reason: string }
   if (row.suppressed_until && new Date(row.suppressed_until) > new Date()) {
     return { contactable: false, reason: 'Suppressed' }
   }
-  if (row.opted_out_at) return { contactable: false, reason: 'Opted out (log)' }
-  if (row.bounced_at) return { contactable: false, reason: 'Bounced (log)' }
+  if (row.opted_out_at) return { contactable: false, reason: 'Opted out' }
+  if (row.bounced_at) return { contactable: false, reason: 'Bounced' }
   return { contactable: true, reason: 'Contactable' }
 }
+
+/** Escapes characters PostgREST reads as syntax inside an or() filter. */
+const clean = (value: string) => value.replace(/[%,()]/g, ' ').trim()
 
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; filter?: string }>
+  searchParams: Promise<{
+    q?: string
+    ref?: string
+    loc?: string
+    filter?: string
+    page?: string
+  }>
 }) {
   const brand = await requireBrand()
   const params = await searchParams
 
-  const term = (params.q ?? '').trim()
+  const q = (params.q ?? '').trim()
+  const ref = (params.ref ?? '').trim()
+  const loc = (params.loc ?? '').trim()
   const filter: Filter =
     params.filter === 'contactable' || params.filter === 'unreachable' ? params.filter : 'all'
   const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1)
@@ -64,13 +75,10 @@ export default async function ContactsPage({
   const supabase = await createServerSupabaseClient()
 
   /*
-   * No .eq('brand_id', …) anywhere below. The rows come back scoped because
-   * the database scopes them, which is the same reason this page cannot be
-   * made to leak by tampering with the query string: `page`, `q` and `filter`
-   * only ever narrow a set that was already narrowed by the policy.
-   *
-   * Paging is done with .range(), so only fifty rows cross the network however
-   * large the brand is.
+   * No .eq('brand_id', …) anywhere below. Rows come back scoped because the
+   * database scopes them, which is why tampering with the query string cannot
+   * widen the result: every parameter only ever narrows a set the policy has
+   * already narrowed.
    */
   let query = supabase
     .from('contacts')
@@ -79,15 +87,11 @@ export default async function ContactsPage({
       { count: 'exact' },
     )
 
-  if (term) {
-    // Matched against the three fields a person would actually search by. The
-    // trigram indexes are what keep this quick at 81,842 rows; without them a
-    // leading-wildcard match reads the whole table.
-    const escaped = term.replace(/[%,()]/g, ' ')
-    query = query.or(
-      `full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,external_id.ilike.${escaped}%`,
-    )
-  }
+  // Each column filters its own field, so a search for "CT-0057" in the
+  // reference column cannot accidentally match somebody's notes.
+  if (q) query = query.or(`full_name.ilike.%${clean(q)}%,email.ilike.%${clean(q)}%`)
+  if (ref) query = query.ilike('external_id', `%${clean(ref)}%`)
+  if (loc) query = query.or(`city.ilike.%${clean(loc)}%,country_code.ilike.%${clean(loc)}%`)
 
   if (filter === 'contactable') {
     query = query
@@ -119,16 +123,30 @@ export default async function ContactsPage({
   const total = count ?? 0
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const href = (next: Partial<{ q: string; page: number; filter: Filter }>) => {
+  const href = (next: Partial<{ page: number; filter: Filter }>) => {
     const search = new URLSearchParams()
-    const q = next.q ?? term
-    const f = next.filter ?? filter
     if (q) search.set('q', q)
+    if (ref) search.set('ref', ref)
+    if (loc) search.set('loc', loc)
+    const f = next.filter ?? filter
     if (f !== 'all') search.set('filter', f)
     if (next.page && next.page > 1) search.set('page', String(next.page))
     const qs = search.toString()
     return qs ? `/portal/contacts?${qs}` : '/portal/contacts'
   }
+
+  const filtered = Boolean(q || ref || loc || filter !== 'all')
+
+  // Page numbers around the current one, so 4,093 pages do not print 4,093
+  // links. Always includes the first and last.
+  const pageNumbers = (() => {
+    const around = new Set<number>([1, lastPage, page])
+    for (let offset = 1; offset <= 2; offset += 1) {
+      if (page - offset > 1) around.add(page - offset)
+      if (page + offset < lastPage) around.add(page + offset)
+    }
+    return [...around].sort((a, b) => a - b)
+  })()
 
   return (
     <main className={styles.page}>
@@ -137,77 +155,106 @@ export default async function ContactsPage({
         <BasisTag basis="derived" />
       </header>
 
-      {/* A plain GET form: search works with JavaScript disabled, the result is
-          a real URL somebody can bookmark or send to a colleague, and the back
-          button behaves. */}
-      <form method="get" action="/portal/contacts" className={styles.controls} role="search">
-        <label htmlFor="q" className={styles.srOnly}>
-          Search customers by name, email or reference
-        </label>
-        <input
-          id="q"
-          name="q"
-          type="search"
-          defaultValue={term}
-          placeholder="Name, email, or reference such as CT-0057"
-          className={styles.search}
-        />
-        {filter !== 'all' ? <input type="hidden" name="filter" value={filter} /> : null}
-        <button type="submit" className={styles.searchButton}>
-          Search
-        </button>
-      </form>
+      {/*
+        A plain GET form. Search works with JavaScript disabled, the result is
+        a real URL somebody can bookmark or send to a colleague, and the back
+        button behaves. The inputs live inside the table head and reach this
+        form through the `form` attribute, because a <form> cannot legally be a
+        child of <table>.
+      */}
+      <form id="contact-filters" method="get" action="/portal/contacts" role="search" />
 
-      <div className={styles.filters}>
-        {(['all', 'contactable', 'unreachable'] as const).map((option) => (
-          <Link
-            key={option}
-            href={href({ filter: option, page: 1 })}
-            className={filter === option ? styles.filterCurrent : styles.filter}
-            aria-current={filter === option ? 'true' : undefined}
-          >
-            {option === 'all' ? 'Everyone' : option === 'contactable' ? 'Contactable' : 'Cannot be reached'}
+      <div className={styles.toolbar}>
+        <p className={styles.summary}>
+          {total === 0 ? (
+            'No customers match.'
+          ) : (
+            <>
+              <strong>{total.toLocaleString('en')}</strong>{' '}
+              {filtered ? 'matching' : 'customers'} · showing{' '}
+              {(from + 1).toLocaleString('en')}–
+              {Math.min(from + PAGE_SIZE, total).toLocaleString('en')}
+            </>
+          )}
+        </p>
+
+        {filtered ? (
+          <Link href="/portal/contacts" className={styles.clearLink}>
+            Clear all filters
           </Link>
-        ))}
+        ) : null}
       </div>
 
-      <p className={styles.summary}>
-        {total === 0 ? (
-          'No customers match.'
-        ) : (
-          <>
-            <strong>{total.toLocaleString('en')}</strong>{' '}
-            {term ? `match “${term}”` : 'customers'}
-            {filter === 'contactable' ? ', contactable' : ''} · showing{' '}
-            {(from + 1).toLocaleString('en')}–
-            {Math.min(from + PAGE_SIZE, total).toLocaleString('en')}
-          </>
-        )}
-      </p>
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th scope="col">Customer</th>
+              <th scope="col">Reference</th>
+              <th scope="col">Reach</th>
+              <th scope="col">Where</th>
+              <th scope="col">Signed up</th>
+            </tr>
 
-      {rows.length === 0 ? (
-        <div className={styles.empty}>
-          <p className={styles.emptyTitle}>Nothing to show</p>
-          <p className={styles.emptyBody}>
-            {term
-              ? `No customer matches “${term}”. Try part of a name, an email address, or a reference such as CT-000123.`
-              : 'No customers match this filter.'}
-          </p>
-        </div>
-      ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
+            {/* One search box per column, sitting directly under its heading —
+                so it is obvious which field each one searches. */}
+            <tr className={styles.filterRow}>
+              <td>
+                <label htmlFor="f-q" className={styles.srOnly}>Search name or email</label>
+                <input
+                  id="f-q" name="q" form="contact-filters" type="search"
+                  defaultValue={q} placeholder="Name or email"
+                  className={styles.columnInput}
+                />
+              </td>
+              <td>
+                <label htmlFor="f-ref" className={styles.srOnly}>Search reference</label>
+                <input
+                  id="f-ref" name="ref" form="contact-filters" type="search"
+                  defaultValue={ref} placeholder="CT-000123"
+                  className={styles.columnInput}
+                />
+              </td>
+              <td>
+                <label htmlFor="f-filter" className={styles.srOnly}>Filter by reach</label>
+                <select
+                  id="f-filter" name="filter" form="contact-filters"
+                  defaultValue={filter} className={styles.columnSelect}
+                >
+                  <option value="all">Everyone</option>
+                  <option value="contactable">Contactable</option>
+                  <option value="unreachable">Cannot be reached</option>
+                </select>
+              </td>
+              <td>
+                <label htmlFor="f-loc" className={styles.srOnly}>Search city or country</label>
+                <input
+                  id="f-loc" name="loc" form="contact-filters" type="search"
+                  defaultValue={loc} placeholder="City or country"
+                  className={styles.columnInput}
+                />
+              </td>
+              <td>
+                <button type="submit" form="contact-filters" className={styles.filterButton}>
+                  Search
+                </button>
+              </td>
+            </tr>
+          </thead>
+
+          <tbody>
+            {rows.length === 0 ? (
               <tr>
-                <th scope="col">Customer</th>
-                <th scope="col">Reference</th>
-                <th scope="col">Reach</th>
-                <th scope="col">Where</th>
-                <th scope="col">Signed up</th>
+                <td colSpan={5} className={styles.emptyCell}>
+                  <p className={styles.emptyTitle}>Nothing matches</p>
+                  <p className={styles.emptyBody}>
+                    Try part of a name, an email address, or a reference such as
+                    CT-000123.
+                  </p>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
+            ) : (
+              rows.map((row) => {
                 const reach = reachability(row)
                 return (
                   <tr key={row.id}>
@@ -232,20 +279,18 @@ export default async function ContactsPage({
                     <td className={styles.mono}>
                       {row.signup_at
                         ? new Date(row.signup_at).toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
+                            day: 'numeric', month: 'short', year: 'numeric',
                             timeZone: brand.timezone,
                           })
                         : '—'}
                     </td>
                   </tr>
                 )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {lastPage > 1 ? (
         <nav className={styles.pager} aria-label="Pages">
@@ -256,9 +301,26 @@ export default async function ContactsPage({
           ) : (
             <span className={styles.pageDisabled}>← Previous</span>
           )}
-          <span className={styles.pageStatus}>
-            Page {page.toLocaleString('en')} of {lastPage.toLocaleString('en')}
-          </span>
+
+          <ol className={styles.pageNumbers}>
+            {pageNumbers.map((number, index) => (
+              <li key={number}>
+                {/* A gap where pages were skipped, so 1 … 47 48 49 … 4093 reads
+                    as a range rather than as a mistake. */}
+                {index > 0 && number - pageNumbers[index - 1] > 1 ? (
+                  <span className={styles.gap}>…</span>
+                ) : null}
+                {number === page ? (
+                  <span className={styles.pageCurrent} aria-current="page">{number}</span>
+                ) : (
+                  <Link href={href({ page: number })} className={styles.pageNumber}>
+                    {number}
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ol>
+
           {page < lastPage ? (
             <Link href={href({ page: page + 1 })} className={styles.pageLink} rel="next">
               Next →
@@ -273,7 +335,7 @@ export default async function ContactsPage({
         &ldquo;Contactable&rdquo; uses the same rule as the dashboard: consented,
         not removed, not suppressed, and with no unsubscribe, complaint or
         bounce in the event log. Dates are shown in{' '}
-        {brand.timezone.replace('_', ' ')}.
+        {brand.timezone.replace('_', ' ')}. {PAGE_SIZE} customers per page.
       </CountingRule>
     </main>
   )

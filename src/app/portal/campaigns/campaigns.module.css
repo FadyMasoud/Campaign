@@ -637,3 +637,172 @@
   gap: var(--space-4);
   align-items: start;
 }
+
+/* --- per-column search + pagination -------------------------------------- */
+
+.filterRow td {
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--color-surface-sunken);
+  border-block-end: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.columnInput,
+.columnInputSmall,
+.columnSelect {
+  inline-size: 100%;
+  padding: var(--space-2);
+  min-block-size: 2.25rem;
+  font-family: inherit;
+  /* 1rem stops iOS Safari zooming the page when one of these takes focus. */
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.columnInputSmall { margin-block-start: var(--space-2); }
+
+.columnInput:focus-visible,
+.columnInputSmall:focus-visible,
+.columnSelect:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.filterButton {
+  inline-size: 100%;
+  padding: var(--space-2) var(--space-3);
+  min-block-size: 2.25rem;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-on-accent);
+  background-color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.filterButton:hover { background-color: var(--color-accent-hover); }
+
+.filterButton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.clearLink {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.emptyCell {
+  padding: var(--space-6) !important;
+  text-align: center;
+}
+
+/* --- pager ---------------------------------------------------------------- */
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.pageNumbers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  list-style: none;
+}
+
+.pageNumbers li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.pageNumber,
+.pageCurrent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 2.25rem;
+  min-block-size: 2.25rem;
+  padding-inline: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+}
+
+.pageNumber {
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.pageNumber:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.pageCurrent {
+  color: var(--color-on-accent);
+  background-color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  font-weight: 600;
+}
+
+/* A gap where pages were skipped, so 1 … 47 48 49 … 4093 reads as a range
+   rather than as a mistake. */
+.gap {
+  color: var(--color-text-faint);
+  padding-inline: var(--space-1);
+}
+
+.pageLink,
+.pageDisabled {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  min-block-size: 2.5rem;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.pageLink { color: var(--color-text); background-color: var(--color-surface); }
+
+.pageLink:hover { border-color: var(--color-accent); color: var(--color-accent); }
+
+.pageDisabled {
+  color: var(--color-text-faint);
+  border-color: var(--color-border);
+  cursor: not-allowed;
+}
+
+.srOnly {
+  position: absolute;
+  inline-size: 1px; block-size: 1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
