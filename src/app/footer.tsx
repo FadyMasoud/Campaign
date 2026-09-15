@@ -1,14 +1,17 @@
 import styles from './footer.module.css'
 
 /**
- * The site footer, rendered once in the root layout so it appears on every
- * page — portal, sign-in, and the public shared report alike.
+ * The footer, rendered by the portal layout — not by the root layout.
+ *
+ * So it appears on the signed-in portal and nowhere else. Sign-in,
+ * /no-access and the public shared report have no footer: a bar reading
+ * "Campaign Portal · Velocity Growth" under a stranger's one-campaign report
+ * is chrome from an application they have no account for, and the isolation
+ * note beneath it is addressed to someone who is signed in.
  *
  * It sits beside the sidebar rather than underneath it. The rail is
- * `position: fixed`, so a full-width footer would run behind it; the offset is
- * applied in CSS with `:has()`, which lets one footer serve both the pages
- * that have a sidebar and the ones that do not, without the component needing
- * to know which route it is on.
+ * `position: fixed`, so the offset is a plain margin in CSS — no `:has()`,
+ * because the footer now only ever renders on a page that has the rail.
  */
 export function SiteFooter() {
   const year = new Date().getFullYear()

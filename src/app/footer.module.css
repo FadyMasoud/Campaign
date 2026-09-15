@@ -13,6 +13,11 @@
   gap: var(--space-2) var(--space-4);
   padding: var(--space-3) var(--space-6);
 
+  /* The rail is position:fixed, so the footer would otherwise run behind it.
+     No :has() needed any more: the footer is rendered by the portal layout, so
+     it only ever exists on a page that has the rail. */
+  margin-inline-start: var(--sidebar-width);
+
   border-block-start: 1px solid var(--color-border);
   background-color: var(--color-surface);
   /* The bar sits over scrolling content, so it needs its own ground rather
@@ -20,19 +25,9 @@
   box-shadow: 0 -1px 3px rgb(11 31 51 / 0.05);
 }
 
-/*
- * The rail is position:fixed, so without an offset the footer runs behind it —
- * which is exactly what happened when this was written as `body:has(.shell)`.
- * CSS Modules rewrites class names per file, so `.shell` compiled to a name
- * belonging to this stylesheet and matched nothing. A data attribute is not
- * rewritten, so it works across module boundaries.
- */
-body:has([data-portal-shell]) .footer {
-  margin-inline-start: var(--sidebar-width);
-}
-
+/* Below this width the rail collapses into a drawer and stops taking space. */
 @media (max-width: 60rem) {
-  body:has([data-portal-shell]) .footer {
+  .footer {
     margin-inline-start: 0;
   }
 }

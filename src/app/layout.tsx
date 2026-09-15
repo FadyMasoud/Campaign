@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Serif } from 'next/font/google'
-import { SiteFooter } from './footer'
 import './globals.css'
 
 /*
@@ -68,10 +67,14 @@ export default function RootLayout({
       dir="ltr"
       className={`${plexSans.variable} ${plexSerif.variable} ${plexMono.variable}`}
     >
-      <body>
-        {children}
-        <SiteFooter />
-      </body>
+      {/*
+        The footer is deliberately NOT here. It belongs to the portal shell and
+        is rendered by the portal layout, so sign-in, /no-access and the public
+        shared report have no footer at all — a bar reading "Campaign Portal ·
+        Velocity Growth" under a stranger's one-campaign report is chrome from
+        an application they have no account for.
+      */}
+      <body>{children}</body>
     </html>
   )
 }
