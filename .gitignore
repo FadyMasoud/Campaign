@@ -52,3 +52,8 @@ supabase/.branches/
 
 # Ad-hoc throwaway scripts
 .tmp-*
+
+# Generated PDFs. Both are built from files that ARE tracked -
+# docs/handbook.html and docs/SUBMISSION-EMAIL.md - so the source is in the
+# repo and the binary is not.
+docs/*.pdf

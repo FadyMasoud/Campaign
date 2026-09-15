@@ -1,8 +1,7 @@
 # Submission email — ready to send
 
-> Copy everything below the line. Three placeholders in **bold** are yours to
-> fill in: how long it took, your earliest start date, and your notice period.
-> Everything else is filled in and verified against the live deployment.
+> Copy everything below the line. Complete and verified against the live
+> deployment — nothing left to fill in.
 
 ---
 
@@ -113,9 +112,9 @@ brief-to-build traceability document, and a project handbook.
 - **AI tools** — Claude (Opus 5) via Claude Code, used as a pair-programmer.
   Disclosed phase by phase in `docs/AI-USAGE.md`, including the places I
   overruled it and why.
-- **How long it took** — **[fill in]**
-- **Earliest start date** — **[fill in]**
-- **Notice period** — **[fill in]**
+- **How long it took** — about two days of focused work.
+- **Earliest start date** — 30 days from offer acceptance.
+- **Notice period** — 30 days, which is what sets the date above.
 
 ---
 
