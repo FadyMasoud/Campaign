@@ -18,7 +18,7 @@ export default async function PortalLayout({ children }: { children: React.React
   const brand = await requireBrand()
 
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} data-portal-shell>
       <PortalNav
         brandName={brand.brandName}
         brandCode={brand.brandCode}

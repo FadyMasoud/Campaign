@@ -18,13 +18,13 @@ export function SiteFooter() {
       <p className={styles.line}>
         <span className={styles.name}>Campaign Portal</span>
         <span className={styles.sep} aria-hidden="true">·</span>
-        <span>Built for Velocity Growth</span>
+        <span>Velocity Growth</span>
         <span className={styles.sep} aria-hidden="true">·</span>
         <span>{year}</span>
       </p>
       <p className={styles.note}>
-        Each brand sees only its own data. Enforced in the database, not in this
-        interface.
+        Each brand sees only its own data — enforced in the database, not in
+        this interface.
       </p>
     </footer>
   )
