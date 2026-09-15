@@ -1,3 +1,10 @@
+/* The import report.
+
+   Each file is its own card with a navy header, matching the sidebar — so a
+   file reads as a titled object rather than another pale box on a pale page.
+   Inside, a sentence comes before the digits: most people want the shape of
+   the answer before the numbers. */
+
 .page {
   max-inline-size: var(--width-content);
   margin-inline: auto;
@@ -7,34 +14,11 @@
   gap: var(--space-5);
 }
 
-.header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.eyebrow {
-  font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--color-text-faint);
-}
-
-.back {
-  color: var(--color-accent);
-  text-decoration: none;
-}
-
-.back:hover {
-  text-decoration: underline;
-}
+.header { display: flex; flex-direction: column; gap: var(--space-2); }
 
 .title {
   font-family: var(--font-serif);
   font-size: var(--text-2xl);
-  line-height: var(--leading-tight);
   letter-spacing: var(--tracking-tight);
   color: var(--color-text);
 }
@@ -47,207 +31,231 @@
   text-wrap: pretty;
 }
 
-.totals {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+.link { color: var(--color-accent); text-decoration: underline; }
+
+/* --- the summary --------------------------------------------------------- */
+
+.summaryCard {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  display: flex;
+  flex-direction: column;
   gap: var(--space-4);
 }
 
-.total {
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--color-surface);
+.summarySentence {
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+  text-wrap: pretty;
 }
 
-.totalLabel {
+.refusedWord { color: var(--color-warning); }
+
+/* One bar says "how much of it worked" faster than three numbers do. */
+.bar {
+  display: flex;
+  block-size: 0.625rem;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background-color: var(--color-surface-sunken);
+}
+
+.barLoaded { background-color: var(--color-success-fill); }
+.barRefused { background-color: var(--color-warning-fill); }
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: var(--space-4);
+}
+
+.total dt {
   font-family: var(--font-ui);
   font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
   color: var(--color-text-muted);
-  margin-block-end: var(--space-2);
+  margin-block-end: var(--space-1);
 }
 
-.totalValue,
-.totalValueWarn {
+.total dd {
   font-family: var(--font-mono);
   font-size: var(--text-2xl);
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
 
-.totalValueWarn {
-  color: var(--color-warning);
-}
+.valueOk { color: var(--color-success); }
+.valueBad { color: var(--color-warning); }
 
-.runs {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-}
+/* --- one file ------------------------------------------------------------ */
+
+.runs { display: flex; flex-direction: column; gap: var(--space-5); }
 
 .run {
-  padding: var(--space-5);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background-color: var(--color-surface);
+  overflow: hidden; /* keeps the navy header inside the rounded corners */
 }
 
 .runHeader {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin-block-end: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--color-navy);
 }
+
+.runHeading { min-inline-size: 0; }
 
 .runTitle {
   font-family: var(--font-mono);
   font-size: var(--text-base);
-  color: var(--color-text);
+  font-weight: 500;
+  color: var(--color-on-navy-strong);
   overflow-wrap: anywhere;
 }
 
 .runMeta {
+  font-family: var(--font-ui);
   font-size: var(--text-xs);
-  color: var(--color-text-faint);
-  margin-block-start: var(--space-1);
+  color: var(--color-on-navy-muted);
+  margin-block-start: 2px;
 }
 
-.ok,
-.bad {
+.ok, .bad {
   font-family: var(--font-ui);
   font-size: var(--text-xs);
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: var(--tracking-wide);
-  padding: var(--space-1) var(--space-2);
+  text-transform: uppercase;
+  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-full);
   white-space: nowrap;
 }
 
-.ok {
-  color: var(--color-success);
-  background-color: var(--color-success-soft);
+.ok { color: var(--color-on-navy-strong); background-color: var(--color-success-fill); }
+.bad { color: var(--color-on-navy-strong); background-color: var(--color-danger-fill); }
+
+.runBody {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
-.bad {
-  color: var(--color-danger);
-  background-color: var(--color-danger-soft);
+.runSentence {
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+  text-wrap: pretty;
 }
 
-.counts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+/* --- issues -------------------------------------------------------------- */
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--color-border);
+}
+
+/* A dot plus the words — colour alone would leave "refused" and "kept"
+   indistinguishable to anyone who cannot separate the two hues. */
+.dotBad, .dotWarn {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.dotBad { background-color: var(--color-danger-fill); }
+.dotWarn { background-color: var(--color-warning-fill); }
+
+.issueList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
-  margin-block-end: var(--space-4);
+}
+
+.issue {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
   padding: var(--space-3);
   border-radius: var(--radius-md);
   background-color: var(--color-surface-sunken);
 }
 
-.counts dt {
-  font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-
-.counts dd {
+/* The count leads, because it is the thing a person reacts to first. */
+.issueCountBad, .issueCountWarn {
+  flex-shrink: 0;
+  min-inline-size: 4.5rem;
+  text-align: end;
   font-family: var(--font-mono);
   font-size: var(--text-lg);
   font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.issueCountBad { color: var(--color-danger); }
+.issueCountWarn { color: var(--color-warning); }
+
+.issueText { min-inline-size: 0; }
+
+.issueTitle {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--color-text);
 }
 
-.warnText {
-  color: var(--color-warning);
-}
-
-/* Tables are the one thing allowed to scroll sideways on a phone; the page
-   itself must not. */
-.table {
-  inline-size: 100%;
-  border-collapse: collapse;
-  display: block;
-  overflow-x: auto;
-}
-
-.caption {
-  text-align: start;
-  font-size: var(--text-xs);
-  color: var(--color-text-faint);
-  margin-block-end: var(--space-3);
-  text-wrap: pretty;
-}
-
-.table th {
-  text-align: start;
-  font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wide);
-  color: var(--color-text-muted);
-  padding-block: var(--space-2);
-  border-block-end: 1px solid var(--color-border);
-  white-space: nowrap;
-}
-
-.table td {
-  padding-block: var(--space-3);
-  padding-inline-end: var(--space-4);
-  border-block-end: 1px solid var(--color-border);
+.issueExplain {
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
-  color: var(--color-text);
-  vertical-align: top;
-}
-
-.countCell {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.badgeBad,
-.badgeWarn {
-  display: inline-block;
-  font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-full);
-  margin-inline-end: var(--space-2);
-}
-
-.badgeBad {
-  color: var(--color-danger);
-  background-color: var(--color-danger-soft);
-}
-
-.badgeWarn {
-  color: var(--color-warning);
-  background-color: var(--color-warning-soft);
-}
-
-.exampleCell {
   color: var(--color-text-muted);
+  max-inline-size: var(--width-prose);
+  text-wrap: pretty;
+  margin-block-start: 2px;
+}
+
+/* The example is what makes the number actionable: a line to open and the
+   actual value that caused it. */
+.issueExample {
+  margin-block-start: var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .line {
-  display: inline-block;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--color-text-faint);
-  margin-inline-end: var(--space-2);
 }
 
 .value {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  padding: 0 var(--space-2);
+  padding: 1px var(--space-2);
   border-radius: var(--radius-sm);
-  background-color: var(--color-surface-sunken);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
   overflow-wrap: anywhere;
 }
 
@@ -263,6 +271,11 @@
   background-color: var(--color-danger-soft);
   border-inline-start: 3px solid var(--color-danger);
   border-radius: var(--radius-sm);
+}
+
+.footnote {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
 }
 
 .empty {
